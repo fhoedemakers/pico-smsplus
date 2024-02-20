@@ -1,0 +1,21 @@
+[video]
+; Video scale multiplier
+scale = 2
+; Bilinear Filter: 0 = off, 1 = on
+filter = 0
+
+[audio]
+; Sample Rate: 22050, 44100, 48000
+rate = 48000
+
+; FM Chip Enable (YM2413): 0 = off, 1 = on
+fm = 1
+
+; FM Emulator: 0 = EMU2413, 1 = YM2413
+fmtype = 0
+
+[misc]
+; Region: 0 = Domestic (Japan), 1 = Overseas (Non-Japan)
+region = 0
+; Fast-Forward Speed Multiplier
+ffspeed = 2
