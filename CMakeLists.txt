@@ -51,7 +51,7 @@ PRIVATE
 target_include_directories(${projectname}
 PRIVATE
     pico_lib
-    sms
+    core
     shell
     .
 )

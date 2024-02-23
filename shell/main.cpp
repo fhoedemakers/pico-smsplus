@@ -5,6 +5,8 @@
  */
 
 #include "pico/stdlib.h"
+#include "shared.h"
+
 
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN

@@ -18,6 +18,10 @@
 #endif
 #endif
 
+#ifndef SMS_FILE_ADDR
+#define SMS_FILE_ADDR 0x10080000
+#endif
+
 #include "macros.h"
 #include "z80.h"
 #include "sms.h"

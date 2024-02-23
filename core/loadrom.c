@@ -70,7 +70,7 @@ int load_rom(char *filename)
 
     uint8_t *temprom = malloc(size * sizeof(uint8_t));
     memcpy(temprom, cart.rom, size);
-    sha1(cart.sha1, temprom, size);
+    sha1(8, temprom, size);
     free(temprom);
 
     /* Assign default settings (US NTSC machine) */
