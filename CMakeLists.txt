@@ -51,6 +51,8 @@ PRIVATE
 target_include_directories(${projectname}
 PRIVATE
     pico_lib
+    sms
+    shell
     .
 )
 add_subdirectory(core)
