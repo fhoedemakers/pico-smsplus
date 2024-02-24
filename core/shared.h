@@ -21,7 +21,10 @@
 #ifndef SMS_FILE_ADDR
 #define SMS_FILE_ADDR 0x10080000
 #endif
-
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 #include "macros.h"
 #include "z80.h"
 #include "sms.h"
@@ -42,5 +45,7 @@
 #include "state.h"
 #include "loadrom.h"
 #include "hash.h"
-
+#ifdef __cplusplus
+}
+#endif
 #endif /* _SHARED_H_ */

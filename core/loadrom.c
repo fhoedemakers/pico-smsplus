@@ -28,33 +28,82 @@ rominfo_t game_list[] = {
     {-1        , -1           , -1         ,  -1               , NULL                           },
 };
 
-int load_rom(char *filename)
+// int load_rom(char *filename)
+// {
+//     int i;
+//     int size;
+
+//     if(cart.rom)
+//     {
+//         free(cart.rom);
+//         cart.rom = NULL;
+//     }
+
+// 	FILE *fd = NULL;
+
+// 	fd = fopen(filename, "rb");
+// 	if(!fd) return 0;
+
+// 	/* Seek to end of file, and get size */
+// 	fseek(fd, 0, SEEK_END);
+// 	size = ftell(fd);
+// 	fseek(fd, 0, SEEK_SET);
+
+// 	cart.rom = malloc(size);
+// 	if(!cart.rom) return 0;
+// 	fread(cart.rom, size, 1, fd);
+
+// 	fclose(fd);
+
+//     /* Don't load games smaller than 16K */
+//     if(size < 0x4000) return 0;
+
+//     /* Take care of image header, if present */
+//     if((size / 512) & 1)
+//     {
+//         size -= 512;
+//         memmove(cart.rom, cart.rom + 512, size);
+//     }
+
+//     cart.pages = (size / 0x4000);
+//     cart.crc = crc32(0L, cart.rom, size);
+
+//     uint8_t *temprom = malloc(size * sizeof(uint8_t));
+//     memcpy(temprom, cart.rom, size);
+//     sha1(cart.sha1, temprom, size);
+//     free(temprom);
+
+//     /* Assign default settings (US NTSC machine) */
+//     cart.mapper     = MAPPER_SEGA;
+//     sms.display     = DISPLAY_NTSC;
+//     sms.territory   = TERRITORY_EXPORT;
+
+//     /* Look up mapper in game list */
+//     for(i = 0; game_list[i].name != NULL; i++)
+//     {
+//         if(cart.crc == game_list[i].crc)
+//         {
+//             cart.mapper     = game_list[i].mapper;
+//             sms.display     = game_list[i].display;
+//             sms.territory   = game_list[i].territory;
+//         }
+//     }
+
+//     system_assign_device(PORT_A, DEVICE_PAD2B);
+//     system_assign_device(PORT_B, DEVICE_PAD2B);
+
+//     return 1;
+// }
+
+int load_rom()
 {
     int i;
     int size;
 
-    if(cart.rom)
-    {
-        free(cart.rom);
-        cart.rom = NULL;
-    }
-
-	FILE *fd = NULL;
-
-	fd = fopen(filename, "rb");
-	if(!fd) return 0;
-
-	/* Seek to end of file, and get size */
-	fseek(fd, 0, SEEK_END);
-	size = ftell(fd);
-	fseek(fd, 0, SEEK_SET);
-
-	cart.rom = malloc(size);
-	if(!cart.rom) return 0;
-	fread(cart.rom, size, 1, fd);
-
-	fclose(fd);
-
+    uint8_t *rom = (uint8_t*)SMS_FILE_ADDR + sizeof(uint32_t);
+    uint32_t *rom_size = (uint32_t*)(SMS_FILE_ADDR);
+    size = *rom_size;
+	
     /* Don't load games smaller than 16K */
     if(size < 0x4000) return 0;
 
@@ -62,16 +111,18 @@ int load_rom(char *filename)
     if((size / 512) & 1)
     {
         size -= 512;
+        cart.rom = rom + 512;
         memmove(cart.rom, cart.rom + 512, size);
     }
 
     cart.pages = (size / 0x4000);
     cart.crc = crc32(0L, cart.rom, size);
 
-    uint8_t *temprom = malloc(size * sizeof(uint8_t));
-    memcpy(temprom, cart.rom, size);
-    sha1(8, temprom, size);
-    free(temprom);
+    // uint8_t *temprom = malloc(size * sizeof(uint8_t));
+    // memcpy(temprom, cart.rom, size);
+    // sha1(cart.sha1, temprom, size);
+    // free(temprom);
+    sha1(cart.sha1, cart.rom, size);
 
     /* Assign default settings (US NTSC machine) */
     cart.mapper     = MAPPER_SEGA;
@@ -94,7 +145,6 @@ int load_rom(char *filename)
 
     return 1;
 }
-
 int load_rom_mem(uint8_t *rom, size_t size)
 {
     int i;

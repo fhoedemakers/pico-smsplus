@@ -25,6 +25,7 @@ input_t input;
 /* Run the virtual console emulation for one frame */
 void system_frame(int skip_render)
 {
+   
     static int iline_table[] = {0xC0, 0xE0, 0xF0};
     int lpf = (sms.display == DISPLAY_NTSC) ? 262 : 313;
     int iline;
