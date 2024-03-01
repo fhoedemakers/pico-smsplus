@@ -1,328 +1,297 @@
-/*
-    sms.c --
-    Sega Master System console emulation.
-*/
+
 #include "shared.h"
 
 /* SMS context */
-sms_t sms;
+t_sms sms;
 
-uint8_t dummy_write[0x400];
-uint8_t dummy_read[0x400];
+extern void ym2413_write(int chip, int offset, int data);
 
-void read_map(uint8_t *src, int offset, int length)
-{
-    int index;
-    int page_shift = 10;
-    int page_count = (length >> page_shift) & 0x3F;
+/* Run the virtual console emulation for one frame */
+void in_ram(sms_frame)(int skip_render) {
+    /* Take care of hard resets */
+    if (input.system & INPUT_HARD_RESET) {
+        system_reset();
+    }
 
-    for(index = 0; index < page_count; index++)
-    {
-        cpu_readmap[(offset >> page_shift) | index] = &src[index << page_shift];
+    /* Debounce pause key */
+    if (input.system & INPUT_PAUSE) {
+        if (!sms.paused) {
+            sms.paused = 1;
+
+            z80_set_nmi_line(ASSERT_LINE);
+            z80_set_nmi_line(CLEAR_LINE);
+        }
+    } else {
+        sms.paused = 0;
+    }
+
+    if (snd.log) snd.callback(0x00);
+
+    for (vdp.line = 0; vdp.line < 262; vdp.line += 1) {
+        /* Handle VDP line events */
+        vdp_run();
+
+        /* Draw the current frame */
+        if (!skip_render) render_line(vdp.line);
+
+        /* Run the Z80 for a line */
+        z80_execute(227);
+    }
+
+    /* Update the emulated sound stream */
+    if (snd.enabled) {
+/*
+        int count;
+
+        SN76496Update(0, snd.psg_buffer, snd.bufsize, sms.psg_mask);
+
+//        if(sms.use_fm)
+//        {
+//            int i;
+//            for(i = 0; i < snd.bufsize; i++)
+//            {
+//                snd.fm_buffer[i] = OPLL_calc(opll);
+//            }
+//        }
+
+        for(count = 0; count < snd.bufsize; count += 1)
+        {
+            signed short left   = 0;
+            signed short right  = 0;
+//            left = right = snd.fm_buffer[count];
+			left=0;
+            left  += snd.psg_buffer[0][count];
+            right += snd.psg_buffer[1][count];
+            snd.buffer[0][count] = left;
+            snd.buffer[1][count] = right;
+        }
+*/
+        SN76496Update(0, snd.buffer, snd.bufsize, sms.psg_mask);
     }
 }
 
-void writemem_mapper_none(int offset, int data)
-{
-    cpu_writemap[offset >> 10][offset & 0x03FF] = data;
-}
 
-void writemem_mapper_sega(int offset, int data)
-{
-    cpu_writemap[offset >> 10][offset & 0x03FF] = data;
-    if(offset >= 0xFFFC)
-        sms_mapper_w(offset & 3, data);
-}
-
-void writemem_mapper_codies(int offset, int data)
-{
-    switch(offset & 0xC000)
-    {
-        case 0x0000:
-            sms_mapper_w(1, data);
-            return;
-            
-        case 0x4000:
-            sms_mapper_w(2, data);
-            return;
-            
-        case 0x8000:
-            sms_mapper_w(3, data);
-            return;
-            
-        case 0xC000:
-            cpu_writemap[offset >> 10][offset & 0x03FF] = data;
-            return;
-    }
-
-}
-
-void writemem_mapper_korea(int offset, int data)
-{
-    int i;
-    static const int bank_mask = 0x0F;
-    static const int bank_shift = 13;
-    static const int page_mask = 0x0F;
-    static const int page_shift = 10;
-    uint8_t *base = &cart.rom[(data & bank_mask) << bank_shift];
-
-    switch(offset)
-    {
-        /* 4-bit data written to 0000 maps 8K page to 8000-9FFF */
-        case 0x0000:
-            for(i = 0; i < 8; i++)
-            {
-                cpu_readmap[(0x8000 >> page_shift) + i] = \
-                    &base[(i & page_mask) << page_shift];
-            }
-            return;
-
-        /* 4-bit data written to 0001 maps 8K page to A000-BFFF */
-        case 0x0001:
-            for(i = 0; i < 8; i++)
-            {
-                cpu_readmap[(0xA000 >> page_shift) + i] = \
-                    &base[(i & page_mask) << page_shift];
-            }
-            return;
-
-        /* 4-bit data written to 0002 maps 8K page to 4000-5FFF */
-        case 0x0002:
-            for(i = 0; i < 8; i++)
-            {
-                cpu_readmap[(0x4000 >> page_shift) + i] = \
-                    &base[(i & page_mask) << page_shift];
-            }
-            return;
-
-        /* 4-bit data written to 0003 maps 8K page to 6000-7FFF */
-        case 0x0003:
-            for(i = 0; i < 8; i++)
-            {
-                cpu_readmap[(0x6000 >> page_shift) + i] = \
-                    &base[(i & page_mask) << page_shift];
-            }
-            return;
-    }
-
-    cpu_writemap[offset >> 10][offset & 0x03FF] = data;
-}
-
-void writemem_mapper_korea2(int offset, int data)
-{
-    int i;
-    static const int bank_mask = 0x3F;
-    static const int bank_shift = 13;
-    static const int page_shift = 10;
-    uint8_t *base = &cart.rom[(data & bank_mask) << bank_shift];
-
-    switch(offset)
-    {
-        case 0x4000: /* 6-bit data written to 4000 maps 8K page to 4000-5FFF */
-        case 0x6000: /* 6-bit data written to 6000 maps 8K page to 6000-7FFF */
-        case 0x8000: /* 6-bit data written to 8000 maps 8K page to 8000-9FFF */
-        case 0xA000: /* 6-bit data written to A000 maps 8K page to A000-BFFF */
-            for(i = 0; i < 8; i++)
-            {
-                cpu_readmap[(offset >> page_shift) + i] = \
-                    &base[(i & bank_mask) << page_shift];
-            }
-            return;
-    }
-
-    cpu_writemap[offset >> 10][offset & 0x03FF] = data;
-}
-
-
-void sms_init(void)
-{
-    z80_init();
-
+void sms_init(void) {
+    cpu_reset();
     sms_reset();
-
-    /* Default: open bus */
-    data_bus_pullup     = 0x00;
-    data_bus_pulldown   = 0x00;
-
-    /* Assign mapper */
-    switch(cart.mapper)
-    {
-        case MAPPER_NONE:
-            cpu_writemem16 = writemem_mapper_none;
-            break;
-
-        case MAPPER_SEGA:
-            cpu_writemem16 = writemem_mapper_sega;
-            break;
-
-        case MAPPER_KOREA:
-            cpu_writemem16 = writemem_mapper_korea;
-            break;
-
-        case MAPPER_KOREA2:
-            cpu_writemem16 = writemem_mapper_korea2;
-            break;
-
-        case MAPPER_CODIES:
-            cpu_writemem16 = writemem_mapper_codies;
-            break;
-
-        default:
-            cpu_writemem16 = writemem_mapper_sega;
-            break;
-    }
-
-    /* Initialize selected console emulation */
-    switch(sms.console)
-    {
-        case CONSOLE_SMS:
-            cpu_writeport16 = sms_port_w;
-            cpu_readport16 = sms_port_r;
-            break;
-  
-        case CONSOLE_SMS2:
-            cpu_writeport16 = sms_port_w;
-            cpu_readport16 = sms_port_r;
-            data_bus_pullup = 0xFF;
-            break;
-
-        case CONSOLE_GG:
-            cpu_writeport16 = gg_port_w;
-            cpu_readport16 = gg_port_r;
-            data_bus_pullup = 0xFF;
-            break;
-
-        case CONSOLE_GGMS:
-            cpu_writeport16 = ggms_port_w;
-            cpu_readport16 = ggms_port_r;
-            data_bus_pullup = 0xFF;
-            break;
-
-        case CONSOLE_GEN:
-        case CONSOLE_MD:
-            cpu_writeport16 = md_port_w;
-            cpu_readport16 = md_port_r;
-            break;
-
-        case CONSOLE_GENPBC:
-        case CONSOLE_MDPBC:
-            cpu_writeport16 = md_port_w;
-            cpu_readport16 = md_port_r;
-            data_bus_pullup = 0xFF;
-            break;
-    }
 }
 
-void sms_shutdown(void)
-{
-    /* Nothing to do */
-}
 
-void sms_reset(void)
-{
-    int i;
-
-    
-    z80_reset(NULL);
-    z80_set_irq_callback(sms_irq_callback);
-
+void sms_reset(void) {
     /* Clear SMS context */
-    memset(dummy_write, 0, sizeof(dummy_write));
-    memset(dummy_read,  0, sizeof(dummy_read));
-    memset(sms.wram,    0, sizeof(sms.wram));
-    memset(cart.sram,    0, sizeof(cart.sram));
+    memset(sms.dummy, 0, 0x2000);
+    memset(sms.ram, 0, 0x2000);
+    //memset(sms.sram, 0, 0x8000);
+    sms.paused = sms.save = sms.port_3F = sms.port_F2 = sms.irq = 0x00;
+    sms.psg_mask = 0xFF;
 
-    sms.paused      = 0x00;
-    sms.save        = 0x00;
-    sms.fm_detect   = 0x00;
-    sms.memctrl     = 0xAB;
-    sms.ioctrl      = 0xFF;
+    /* Load memory maps with default values */
+    cpu_readmap[0] = cart.rom + 0x0000;
+    cpu_readmap[1] = cart.rom + 0x2000;
+    cpu_readmap[2] = cart.rom + 0x4000;
+    cpu_readmap[3] = cart.rom + 0x6000;
+    cpu_readmap[4] = cart.rom + 0x0000;
+    cpu_readmap[5] = cart.rom + 0x2000;
+    cpu_readmap[6] = sms.ram;
+    cpu_readmap[7] = sms.ram;
 
-    for(i = 0x00; i <= 0x2F; i++)
-    {
-        cpu_readmap[i]  = &cart.rom[(i & 0x1F) << 10];
-        cpu_writemap[i] = dummy_write;
-    }
+    cpu_writemap[0] = sms.dummy;
+    cpu_writemap[1] = sms.dummy;
+    cpu_writemap[2] = sms.dummy;
+    cpu_writemap[3] = sms.dummy;
+    cpu_writemap[4] = sms.dummy;
+    cpu_writemap[5] = sms.dummy;
+    cpu_writemap[6] = sms.ram;
+    cpu_writemap[7] = sms.ram;
 
-    for(i = 0x30; i <= 0x3F; i++)
-    {
-        cpu_readmap[i] = &sms.wram[(i & 0x07) << 10];
-        cpu_writemap[i] = &sms.wram[(i & 0x07) << 10];
-    }
-
-    cart.fcr[0] = 0x00;
-    cart.fcr[1] = 0x00;
-    cart.fcr[2] = 0x01;
-    cart.fcr[3] = 0x00;
+    sms.fcr[0] = 0x00;
+    sms.fcr[1] = 0x00;
+    sms.fcr[2] = 0x01;
+    sms.fcr[3] = 0x00;
 }
 
 
-void sms_mapper_w(int address, int data)
-{
-    int i;
+/* Reset Z80 emulator */
+void cpu_reset(void) {
+    z80_reset(0);
+    z80_set_irq_callback(sms_irq_callback);
+}
 
+
+/* Write to memory */
+void cpu_writemem16(int address, int data) {
+    cpu_writemap[(address >> 13)][(address & 0x1FFF)] = data;
+    if (address >= 0xFFFC) sms_mapper_w(address & 3, data);
+}
+
+
+/* Write to an I/O port */
+void cpu_writeport(int port, int data) {
+    switch (port & 0xFF) {
+        case 0x01: /* GG SIO */
+        case 0x02:
+        case 0x03:
+        case 0x04:
+        case 0x05:
+            break;
+
+        case 0x06: /* GG STEREO */
+            if (snd.log) {
+                snd.callback(0x04);
+                snd.callback(data);
+            }
+            sms.psg_mask = (data & 0xFF);
+            break;
+
+        case 0x7E: /* SN76489 PSG */
+        case 0x7F:
+            if (snd.log) {
+                snd.callback(0x03);
+                snd.callback(data);
+            }
+            if (snd.enabled) SN76496Write(0, data);
+            break;
+
+        case 0xBE: /* VDP DATA */
+            vdp_data_w(data);
+            break;
+
+        case 0xBD: /* VDP CTRL */
+        case 0xBF:
+            vdp_ctrl_w(data);
+            break;
+
+        case 0xF0: /* YM2413 */
+        case 0xF1:
+            if (snd.log) {
+                snd.callback((port & 1) ? 0x06 : 0x05);
+                snd.callback(data);
+            }
+            if (snd.enabled && sms.use_fm) ym2413_write(0, port & 1, data);
+            break;
+
+        case 0xF2: /* YM2413 DETECT */
+            if (sms.use_fm) sms.port_F2 = (data & 1);
+            break;
+
+        case 0x3F: /* TERRITORY CTRL. */
+            sms.port_3F = ((data & 0x80) | (data & 0x20) << 1) & 0xC0;
+            if (sms.country == TYPE_DOMESTIC) sms.port_3F ^= 0xC0;
+            break;
+    }
+}
+
+
+/* Read from an I/O port */
+int cpu_readport(int port) {
+    uint8 temp = 0xFF;
+
+    switch (port & 0xFF) {
+        case 0x01: /* GG SIO */
+        case 0x02:
+        case 0x03:
+        case 0x04:
+        case 0x05:
+            return (0x00);
+
+        case 0x7E: /* V COUNTER */
+            return (vdp_vcounter_r());
+            break;
+
+        case 0x7F: /* H COUNTER */
+            return (vdp_hcounter_r());
+            break;
+
+        case 0x00: /* INPUT #2 */
+            temp = 0xFF;
+            if (input.system & INPUT_START) temp &= ~0x80;
+            if (sms.country == TYPE_DOMESTIC) temp &= ~0x40;
+            return (temp);
+
+        case 0xC0: /* INPUT #0 */
+        case 0xDC:
+            temp = 0xFF;
+            if (input.pad[0] & INPUT_UP) temp &= ~0x01;
+            if (input.pad[0] & INPUT_DOWN) temp &= ~0x02;
+            if (input.pad[0] & INPUT_LEFT) temp &= ~0x04;
+            if (input.pad[0] & INPUT_RIGHT) temp &= ~0x08;
+            if (input.pad[0] & INPUT_BUTTON2) temp &= ~0x10;
+            if (input.pad[0] & INPUT_BUTTON1) temp &= ~0x20;
+            if (input.pad[1] & INPUT_UP) temp &= ~0x40;
+            if (input.pad[1] & INPUT_DOWN) temp &= ~0x80;
+            return (temp);
+
+        case 0xC1: /* INPUT #1 */
+        case 0xDD:
+            temp = 0xFF;
+            if (input.pad[1] & INPUT_LEFT) temp &= ~0x01;
+            if (input.pad[1] & INPUT_RIGHT) temp &= ~0x02;
+            if (input.pad[1] & INPUT_BUTTON2) temp &= ~0x04;
+            if (input.pad[1] & INPUT_BUTTON1) temp &= ~0x08;
+            if (input.system & INPUT_SOFT_RESET) temp &= ~0x10;
+            return ((temp & 0x3F) | (sms.port_3F & 0xC0));
+
+        case 0xBE: /* VDP DATA */
+            return (vdp_data_r());
+
+        case 0xBD:
+        case 0xBF: /* VDP CTRL */
+            return (vdp_ctrl_r());
+
+        case 0xF2: /* YM2413 DETECT */
+            if (sms.use_fm) return (sms.port_F2);
+            break;
+    }
+    return (0xFF);
+}
+
+
+void sms_mapper_w(int address, int data) {
     /* Calculate ROM page index */
-    uint8_t page = (data % cart.pages);
+    uint8 page = (data % cart.pages);
 
     /* Save frame control register data */
-    cart.fcr[address] = data;
+    sms.fcr[address] = data;
 
-    switch(address)
-    {
+    switch (address) {
         case 0:
-            if(data & 8)
-            {
-                uint32_t offset = (data & 4) ? 0x4000 : 0x0000;
+            if (data & 8) {
                 sms.save = 1;
-
-                for(i = 0x20; i <= 0x2F; i++)
-                {
-                    cpu_writemap[i] = cpu_readmap[i]  = &cart.sram[offset + ((i & 0x0F) << 10)];
-                }
-            }
-            else
-            {
-                for(i = 0x20; i <= 0x2F; i++)
-                {          
-                    cpu_readmap[i] = &cart.rom[((cart.fcr[3] % cart.pages) << 14) | ((i & 0x0F) << 10)];
-                    cpu_writemap[i] = dummy_write;
-                }
+                /* Page in ROM */
+                cpu_readmap[4] = &sms.sram[(data & 4) ? 0x4000 : 0x0000];
+                cpu_readmap[5] = &sms.sram[(data & 4) ? 0x6000 : 0x2000];
+                cpu_writemap[4] = &sms.sram[(data & 4) ? 0x4000 : 0x0000];
+                cpu_writemap[5] = &sms.sram[(data & 4) ? 0x6000 : 0x2000];
+            } else {
+                /* Page in RAM */
+                cpu_readmap[4] = &cart.rom[((sms.fcr[3] % cart.pages) << 14) + 0x0000];
+                cpu_readmap[5] = &cart.rom[((sms.fcr[3] % cart.pages) << 14) + 0x2000];
+                cpu_writemap[4] = sms.dummy;
+                cpu_writemap[5] = sms.dummy;
             }
             break;
 
         case 1:
-            for(i = 0x01; i <= 0x0F; i++)
-            {
-                cpu_readmap[i] = &cart.rom[(page << 14) | ((i & 0x0F) << 10)];
-            }
+            cpu_readmap[0] = &cart.rom[(page << 14) + 0x0000];
+            cpu_readmap[1] = &cart.rom[(page << 14) + 0x2000];
             break;
 
         case 2:
-            for(i = 0x10; i <= 0x1F; i++)
-            {
-                cpu_readmap[i] = &cart.rom[(page << 14) | ((i & 0x0F) << 10)];
-            }
+            cpu_readmap[2] = &cart.rom[(page << 14) + 0x0000];
+            cpu_readmap[3] = &cart.rom[(page << 14) + 0x2000];
             break;
 
         case 3:
-            if(!(cart.fcr[0] & 0x08))
-            {
-                for(i = 0x20; i <= 0x2F; i++)
-                {
-                    cpu_readmap[i] = &cart.rom[(page << 14) | ((i & 0x0F) << 10)];
-                }
+            if (!(sms.fcr[0] & 0x08)) {
+                cpu_readmap[4] = &cart.rom[(page << 14) + 0x0000];
+                cpu_readmap[5] = &cart.rom[(page << 14) + 0x2000];
             }
             break;
     }
 }
 
 
-
-
-int sms_irq_callback(int param)
-{
-    return 0xFF;
+int sms_irq_callback(int param) {
+    return (0xFF);
 }
-
-
 

@@ -1,51 +1,50 @@
 #ifndef _SHARED_H_
 #define _SHARED_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
+#include <malloc.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <signal.h>
 #include <math.h>
-#include <limits.h>
 
-#ifndef PATH_MAX
-#ifdef  MAX_PATH
-#define PATH_MAX    MAX_PATH
+#define VERSION     "0.9.4a"
+
+#ifdef _MSC_VER
+#include <stdio.h>
+#include <string.h>
+#ifndef __inline__
+#define __inline__ __inline
+#endif
+#ifndef strcasecmp
+#define strcasecmp stricmp
+#endif
+#endif
+
+#ifndef in_ram
+#ifdef PICO_BOARD
+#include <pico/platform.h>
+#define in_ram __not_in_flash_func
 #else
-#define PATH_MAX    1024
+#define in_ram
 #endif
 #endif
 
-#ifndef SMS_FILE_ADDR
-#define SMS_FILE_ADDR 0x10080000
-#endif
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include "macros.h"
+#include "types.h"
 #include "z80.h"
 #include "sms.h"
-#include "pio.h"
-#include "memz80.h"
 #include "vdp.h"
 #include "render.h"
-#include "tms.h"
-#include "sn76489.h"
-#include "emu2413.h"
-#include "ym2413.h"
-#include "fmintf.h"
-#include "stream.h"
-#include "sound.h"
+#include "sn76496.h"
 #include "system.h"
-#include "error.h"
 
-#include "state.h"
-#include "loadrom.h"
-#include "hash.h"
+char unalChar(const char *adr);
+
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* _SHARED_H_ */
