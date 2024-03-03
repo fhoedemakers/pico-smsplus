@@ -42,6 +42,8 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 #define DVICONFIG dviConfig_PicoDVISock
 #endif
 
+#define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
+
 namespace
 {
     constexpr uint32_t CPUFreqKHz = 252000;
@@ -123,8 +125,7 @@ extern "C" void in_ram(sms_palette_sync)(int index) {
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer) {
     //printf("sms_render_line(%i)\r\n", line);
     for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++) {
-        screenBufferLine[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
-        
+        screenBufferLine[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];       
     }
 
    // s_core->getDisplay()->put(screenBufferLine, BMP_WIDTH - (screenCropX * 2));
@@ -138,6 +139,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer) {
 
 void system_load_sram(void) {
     printf("system_load_sram: TODO\n");
+  
     // TODO
 }
 
@@ -157,6 +159,7 @@ void system_save_state() {
 
 void in_ram(core1_main)()
 {
+    printf("core1 started\n");
     while (true)
     {
         dvi_->registerIRQThisCore();
@@ -196,7 +199,8 @@ int main()
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
         sleep_ms(1000);
     }
-
+    // 
+    printf("%x\n", CC(0x7FFF));
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
