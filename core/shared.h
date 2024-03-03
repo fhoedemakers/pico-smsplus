@@ -10,7 +10,9 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-
+// FH Enable little Endian
+#define LSB_FIRST
+// FH End
 #define VERSION     "0.9.4a"
 
 
