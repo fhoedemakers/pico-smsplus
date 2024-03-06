@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/divider.h"
@@ -34,11 +33,10 @@
 #define SMS_AUD_RATE 44100
 #define SMS_FPS 60
 
-
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 #ifndef DVICONFIG
-//#define DVICONFIG dviConfig_PicoDVI
+// #define DVICONFIG dviConfig_PicoDVI
 #define DVICONFIG dviConfig_PicoDVISock
 #endif
 
@@ -108,6 +106,46 @@ namespace
         dvi_->setScanLine(scanLine);
     }
 }
+
+namespace
+{
+    dvi::DVI::LineBuffer *currentLineBuffer_{};
+}
+
+void __not_in_flash_func(drawWorkMeterUnit)(int timing,
+                                            [[maybe_unused]] int span,
+                                            uint32_t tag)
+{
+    if (timing >= 0 && timing < 640)
+    {
+        auto p = currentLineBuffer_->data();
+        p[timing] = tag; // tag = color
+    }
+}
+
+void __not_in_flash_func(drawWorkMeter)(int line)
+{
+    if (!currentLineBuffer_)
+    {
+        return;
+    }
+
+    memset(currentLineBuffer_->data(), 0, 64);
+    memset(&currentLineBuffer_->data()[320 - 32], 0, 64);
+    (*currentLineBuffer_)[160] = 0;
+    if (line == 4)
+    {
+        for (int i = 1; i < 10; ++i)
+        {
+            (*currentLineBuffer_)[16 * i] = 31;
+        }
+    }
+
+    constexpr uint32_t clocksPerLine = 800 * 10;
+    constexpr uint32_t meterScale = 160 * 65536 / (clocksPerLine * 2);
+    util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
+    //    util::WorkMeterEnum(160, clocksPerLine * 2, drawWorkMeterUnit);
+}
 // rendering
 static uint8_t screenCropX = 0;
 static uint16_t screenBufferLine[240];
@@ -116,45 +154,69 @@ static int palette565[32];
 static uint8_t sram[0x8000];
 static settings_t settings;
 static gamedata_t gdata;
-extern "C" void in_ram(sms_palette_sync)(int index) {
-    palette565[index] = ((bitmap.pal.color[index][0] >> 3) << 11)
-                        | ((bitmap.pal.color[index][1] >> 2) << 5)
-                        | (bitmap.pal.color[index][2] >> 3);
+extern "C" void in_ram(sms_palette_sync)(int index)
+{
+    palette565[index] = ((bitmap.pal.color[index][0] >> 3) << 11) | ((bitmap.pal.color[index][1] >> 2) << 5) | (bitmap.pal.color[index][2] >> 3);
 }
 
-extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer) {
-    //printf("sms_render_line(%i)\r\n", line);
-    for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++) {
-        screenBufferLine[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];       
+extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
+{
+    // printf("sms_render_line(%i)\r\n", line);
+    // predrawline
+    util::WorkMeterMark(0xaaaa);
+    auto b = dvi_->getLineBuffer();
+    util::WorkMeterMark(0x5555);
+    uint16_t *sbuffer = b->data() + 32;
+    for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+    {
+       //  screenBufferLine[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
+        sbuffer[i -screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
+        // sizeof(int);
+        // sizeof(uint16_t);
     }
+    currentLineBuffer_ = b;
 
-   // s_core->getDisplay()->put(screenBufferLine, BMP_WIDTH - (screenCropX * 2));
+    // postdrawline
+#if !defined(NDEBUG)
+    util::WorkMeterMark(0xffff);
+    drawWorkMeter(line);
+#endif
+
+    assert(currentLineBuffer_);
+    dvi_->setLineBuffer(line, currentLineBuffer_);
+    currentLineBuffer_ = nullptr;
+    // s_core->getDisplay()->put(screenBufferLine, BMP_WIDTH - (screenCropX * 2));
 
 #ifdef LINUX
-    if (line == BMP_HEIGHT + BMP_Y_OFFSET - 1) {
+    if (line == BMP_HEIGHT + BMP_Y_OFFSET - 1)
+    {
         s_core->getDisplay()->flip();
     }
 #endif
 }
 
-void system_load_sram(void) {
+void system_load_sram(void)
+{
     printf("system_load_sram: TODO\n");
-  
+
     // TODO
 }
 
-void system_save_sram() {
+void system_save_sram()
+{
     printf("system_save_sram: saving sram TODO\n");
 
-  // TODO
+    // TODO
 }
 
-void system_load_state() {
-  //TODO
+void system_load_state()
+{
+    // TODO
 }
 
-void system_save_state() {
-   // TODO
+void system_save_state()
+{
+    // TODO
 }
 
 void in_ram(core1_main)()
@@ -195,18 +257,19 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    for (int i=0; i<5; i++) {
+    for (int i = 0; i < 5; i++)
+    {
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
         sleep_ms(1000);
     }
-    // 
+    //
     printf("%x\n", CC(0x7FFF));
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
-    
-     //
+
+    //
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
                                       dvi::getTiming640x480p60Hz());
     //    dvi_->setAudioFreq(48000, 25200, 6144);
@@ -225,7 +288,7 @@ int main()
 
     multicore_launch_core1(core1_main);
     // TODO usb initialise tusb_init();
-   
+
     // TODO flash ROM
     // TODO Setup DV
     //
@@ -233,48 +296,48 @@ int main()
     //
     // Check the type of ROM
     // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
-    //sms.console = CONSOLE_SMS; // For now, we only support SMS
+    // sms.console = CONSOLE_SMS; // For now, we only support SMS
     load_rom();
 
     fprintf(stdout, "CRC : %08X\n", cart.crc);
-	//fprintf(stdout, "SHA1: %s\n", cart.sha1);
-	// fprintf(stdout, "SHA1: ");
-	// for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
-	// 	fprintf(stdout, "%02X", cart.sha1[i]);
-	// }
-	// fprintf(stdout, "\n");
+    // fprintf(stdout, "SHA1: %s\n", cart.sha1);
+    //  fprintf(stdout, "SHA1: ");
+    //  for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
+    //  	fprintf(stdout, "%02X", cart.sha1[i]);
+    //  }
+    //  fprintf(stdout, "\n");
 
     // Set defaults. Is this needed?
-	settings.video_scale = 2;
-	settings.video_filter = 0;
-	settings.audio_rate = 48000;
-	settings.audio_fm = 1;
-	//settings.audio_fmtype = SND_EMU2413;
-	//settings.misc_region = TERRITORY_DOMESTIC;
-	settings.misc_ffspeed = 2;
+    settings.video_scale = 2;
+    settings.video_filter = 0;
+    settings.audio_rate = 48000;
+    settings.audio_fm = 1;
+    // settings.audio_fmtype = SND_EMU2413;
+    // settings.misc_region = TERRITORY_DOMESTIC;
+    settings.misc_ffspeed = 2;
 
     // TODO
     // Override settings set in the .ini
-	// gbIniError err = gb_ini_parse("smsplus.ini", &smsp_ini_handler, &settings);
-	// if (err.type != GB_INI_ERROR_NONE) {
-	// 	fprintf(stderr, "Error: No smsplus.ini file found.\n");
-	// }
+    // gbIniError err = gb_ini_parse("smsplus.ini", &smsp_ini_handler, &settings);
+    // if (err.type != GB_INI_ERROR_NONE) {
+    // 	fprintf(stderr, "Error: No smsplus.ini file found.\n");
+    // }
 
-    //sms.territory = settings.misc_region;
-	//if (sms.console != CONSOLE_GG) { sms.use_fm = settings.audio_fm; }
-	
-	// Initialize all systems and power on
+    // sms.territory = settings.misc_region;
+    // if (sms.console != CONSOLE_GG) { sms.use_fm = settings.audio_fm; }
 
-	system_init(SMS_AUD_RATE);
-	uint32_t frame=0;
-    while(true) 
+    // Initialize all systems and power on
+
+    system_init(SMS_AUD_RATE);
+    uint32_t frame = 0;
+    while (true)
     {
         // TODO Process input
         sms_frame(0);
         // TODO Process audio
         printf("Frame %d\n", frame++);
         // gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame, 60) & 1);
+        gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame, 60) & 1);
     }
     return 0;
 }
