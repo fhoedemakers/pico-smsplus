@@ -26,21 +26,14 @@
 #include <tusb.h>
 
 #include "shared.h"
-#include "smsplus.h"
-
-#define SMS_WIDTH 256
-#define SMS_HEIGHT 192
-#define SMS_AUD_RATE 44100
-#define SMS_FPS 60
 
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 #ifndef DVICONFIG
 // #define DVICONFIG dviConfig_PicoDVI
-#define DVICONFIG dviConfig_PicoDVISock
+// #define DVICONFIG dviConfig_PicoDVISock
+#define DVICONFIG dviConfig_PimoroniDemoDVSock
 #endif
-
-#define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
 
 namespace
 {
@@ -51,16 +44,26 @@ namespace
         .pinClock = 8,
         .invert = true,
     };
-
+    // Breadboard with Adafruit compononents
     constexpr dvi::Config dviConfig_PicoDVISock = {
         .pinTMDS = {12, 18, 16},
         .pinClock = 14,
         .invert = false,
     };
+    // Pimoroni Digital Video, SD Card & Audio Demo Board
+    constexpr dvi::Config dviConfig_PimoroniDemoDVSock = {
+        .pinTMDS = {8, 10, 12},
+        .pinClock = 6,
+        .invert = true,
+    };
+    // Adafruit Feather RP2040 DVI
+    constexpr dvi::Config dviConfig_AdafruitFeatherDVI = {
+        .pinTMDS = {18, 20, 22},
+        .pinClock = 16,
+        .invert = true,
+    };
 
     std::unique_ptr<dvi::DVI> dvi_;
-
-    // Defined static constexpr uintptr_t NES_FILE_ADDR = 0x10080000;
 
     util::ExclusiveProc exclProc_;
 
@@ -144,48 +147,100 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     constexpr uint32_t clocksPerLine = 800 * 10;
     constexpr uint32_t meterScale = 160 * 65536 / (clocksPerLine * 2);
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
-    //    util::WorkMeterEnum(160, clocksPerLine * 2, drawWorkMeterUnit);
-}
-// rendering
-static uint8_t screenCropX = 0;
-static uint16_t screenBufferLine[240];
-static uint8_t smsBufferLine[SMS_WIDTH];
-static int palette565[32];
-static uint8_t sram[0x8000];
-static settings_t settings;
-static gamedata_t gdata;
-extern "C" void in_ram(sms_palette_sync)(int index)
-{
-    palette565[index] = ((bitmap.pal.color[index][0] >> 3) << 11) | ((bitmap.pal.color[index][1] >> 2) << 5) | (bitmap.pal.color[index][2] >> 3);
 }
 
+
+extern "C" void in_ram(sms_palette_sync)(int index)
+{
+    int r, g, b;
+    r = bitmap.pal.color[index][0];
+    g = bitmap.pal.color[index][1];
+    b = bitmap.pal.color[index][2];
+    // Render using the correct rgb color values
+    // See https://segaretro.org/Palette
+    switch (r)
+    {
+    case 40:
+        r = 85;
+        break;
+    case 128:
+        r = 170;
+        break;
+    case 192:
+        r = 255;
+        break;
+    default:
+        r = 0;
+    }
+    switch (g)
+    {
+    case 40:
+        g = 85;
+        break;
+    case 128:
+        g = 170;
+        break;
+    case 192:
+        g = 255;
+        break;
+    default:
+        g = 0;
+    }
+    switch (b)
+    {
+    case 40:
+        b = 85;
+        break;
+    case 128:
+        b = 170;
+        break;
+    case 192:
+        b = 255;
+        break;
+    default:
+        b = 0;
+    } 
+    palette565[index] = MAKE_PIXEL(r, g, b);
+}
+#define SCANLINEOFFSET 25
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
-    // printf("sms_render_line(%i)\r\n", line);
-    // predrawline
-    util::WorkMeterMark(0xaaaa);
+    // screen line 0 - 3 do not use
+    // screen Line 4 - 235 are the visible screen
+    // SMS renders 192 lines
+
+    line += SCANLINEOFFSET;
+    if ( line < 4 ) return;
+    if (line == SCANLINEOFFSET)
+    {
+        // insert blank lines on top
+        for (int bl = 4; bl < SCANLINEOFFSET; bl++)
+        {
+            auto blank = dvi_->getLineBuffer();
+            uint16_t *sbuffer = blank->data() + 32;
+            __builtin_memset(sbuffer, 0, 512);
+            dvi_->setLineBuffer(bl, blank);
+        }
+    }
+
     auto b = dvi_->getLineBuffer();
-    util::WorkMeterMark(0x5555);
     uint16_t *sbuffer = b->data() + 32;
     for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
     {
-       //  screenBufferLine[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
-        sbuffer[i -screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
-        // sizeof(int);
-        // sizeof(uint16_t);
+        sbuffer[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
     }
-    currentLineBuffer_ = b;
-
-    // postdrawline
-#if !defined(NDEBUG)
-    util::WorkMeterMark(0xffff);
-    drawWorkMeter(line);
-#endif
-
-    assert(currentLineBuffer_);
-    dvi_->setLineBuffer(line, currentLineBuffer_);
-    currentLineBuffer_ = nullptr;
-    // s_core->getDisplay()->put(screenBufferLine, BMP_WIDTH - (screenCropX * 2));
+    dvi_->setLineBuffer(line, b);
+    if (line == (SMS_HEIGHT + SCANLINEOFFSET - 1))
+    {
+        // insert blank lines on bottom
+        for (int bl = line + 1; bl < 236; bl++)
+        {
+            auto blank = dvi_->getLineBuffer();
+            uint16_t *sbuffer = blank->data() + 32;
+            __builtin_memset(sbuffer, 0, 512);
+            dvi_->setLineBuffer(bl, blank);
+        }
+    }
 
 #ifdef LINUX
     if (line == BMP_HEIGHT + BMP_Y_OFFSET - 1)
@@ -249,6 +304,29 @@ void in_ram(core1_main)()
     }
 }
 
+void in_ram(process)(void)
+{
+    // TODO
+#if !defined(NDEBUG)
+    printf("process()\n");
+#endif
+    uint32_t frame = 0;
+    while (true)
+    {
+        // TODO Process input
+        sms_frame(0);
+
+        // TODO Process audio
+        // printf("Frame %d\n", frame++);
+        gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
+        // gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame++, 60) & 1);
+    }
+}
+
+/// @brief 
+/// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
+/// RelWithDebugInfo mode.
+/// @return 
 int main()
 {
     // Set voltage and clock frequency
@@ -299,22 +377,22 @@ int main()
     // sms.console = CONSOLE_SMS; // For now, we only support SMS
     load_rom();
 
-    fprintf(stdout, "CRC : %08X\n", cart.crc);
-    // fprintf(stdout, "SHA1: %s\n", cart.sha1);
-    //  fprintf(stdout, "SHA1: ");
-    //  for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
-    //  	fprintf(stdout, "%02X", cart.sha1[i]);
-    //  }
-    //  fprintf(stdout, "\n");
+    // fprintf(stdout, "CRC : %08X\n", cart.crc);
+    //  fprintf(stdout, "SHA1: %s\n", cart.sha1);
+    //   fprintf(stdout, "SHA1: ");
+    //   for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
+    //   	fprintf(stdout, "%02X", cart.sha1[i]);
+    //   }
+    //   fprintf(stdout, "\n");
 
     // Set defaults. Is this needed?
-    settings.video_scale = 2;
-    settings.video_filter = 0;
-    settings.audio_rate = 48000;
-    settings.audio_fm = 1;
+    // settings.video_scale = 2;
+    // settings.video_filter = 0;
+    // settings.audio_rate = 48000;
+    // settings.audio_fm = 1;
     // settings.audio_fmtype = SND_EMU2413;
     // settings.misc_region = TERRITORY_DOMESTIC;
-    settings.misc_ffspeed = 2;
+    // settings.misc_ffspeed = 2;
 
     // TODO
     // Override settings set in the .ini
@@ -328,16 +406,15 @@ int main()
 
     // Initialize all systems and power on
 
+    // init sms
     system_init(SMS_AUD_RATE);
-    uint32_t frame = 0;
-    while (true)
-    {
-        // TODO Process input
-        sms_frame(0);
-        // TODO Process audio
-        printf("Frame %d\n", frame++);
-        // gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-        gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame, 60) & 1);
-    }
+
+    // load state if any
+    // system_load_state();
+
+    // initialize
+
+    system_reset();
+    process();
     return 0;
 }

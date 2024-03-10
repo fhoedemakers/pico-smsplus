@@ -61,8 +61,6 @@ typedef struct {
     uint8 *rom;
     uint8 pages;
     uint8 type;
-    uint8 mapper;
-    uint32 crc;
 } t_cart;
 
 /* Bitmap structure */

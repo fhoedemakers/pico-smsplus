@@ -27,7 +27,10 @@ set(TINYUSB_DEBUG_LEVE 0)
 include(${PICO_TINYUSB_PATH}/hw/bsp/${FAMILY}/family.cmake)
 family_configure_target(${projectname})
 # add_compile_definitions(CFG_TUSB_DEBUG=0)
-
+set(SMS_FLAGS -DMB_SMS -DLSB_FIRST=0
+        -DPICO_AUDIO_I2S_BUFFER_SAMPLE_LENGTH=735 -DSMS_FILE_ADDR=0x10080000 -DNDEBUG
+)
+target_compile_definitions(${projectname} PUBLIC ${SMS_FLAGS})
 target_link_libraries(${projectname}
 PRIVATE
     pico_stdlib

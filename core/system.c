@@ -46,12 +46,12 @@ void system_init(int rate) {
     sms.save = 0;
 
     /* Clear emulated button state */
-    memset(&input, 0, sizeof(t_input));
+    __builtin_memset(&input, 0, sizeof(t_input));
 }
 
 void audio_init(int rate) {
     /* Clear sound context */
-    memset(&snd, 0, sizeof(t_snd));
+    __builtin_memset(&snd, 0, sizeof(t_snd));
 
     /* Reset logging data */
     snd.log = 0;
@@ -67,8 +67,8 @@ void audio_init(int rate) {
     snd.buffer[0] = (signed short int *) malloc(snd.bufsize * 2);
     snd.buffer[1] = (signed short int *) malloc(snd.bufsize * 2);
     if (!snd.buffer[0] || !snd.buffer[1]) return;
-    memset(snd.buffer[0], 0, snd.bufsize * 2);
-    memset(snd.buffer[1], 0, snd.bufsize * 2);
+    __builtin_memset(snd.buffer[0], 0, snd.bufsize * 2);
+    __builtin_memset(snd.buffer[1], 0, snd.bufsize * 2);
 
     /* YM2413 sound stream */
 //    snd.fm_buffer = (signed short int *)malloc(snd.bufsize * 2);

@@ -10,15 +10,12 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-// FH Enable little Endian
-#define LSB_FIRST
-// FH End
+#include "loadrom.h"
+
 #define VERSION     "0.9.4a"
 
 
-#ifndef SMS_FILE_ADDR
-#define SMS_FILE_ADDR 0x10080000
-#endif
+
 
 #ifdef _MSC_VER
 #include <stdio.h>
@@ -47,8 +44,6 @@ extern "C" {
 #include "render.h"
 #include "sn76496.h"
 #include "system.h"
-#include "loadrom.h"
-#include "hash.h"
 
 char unalChar(const char *adr);
 
