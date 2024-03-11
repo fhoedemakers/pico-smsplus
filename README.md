@@ -9,6 +9,11 @@ The ROM should be placed in some way from 0x10080000, and can be easily transfer
 picotool load foo.sms -t bin -o 0x10080000
 ```
 
+## Video
+Click on image below to see a demo video.
+
+[![Video](https://img.youtube.com/vi/7Hi5HdAcsqc/0.jpg)](https://www.youtube.com/watch?v=7Hi5HdAcsqc)
+
 ## Work in progress
 
 This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be. The emulator is also not very fast, and some games may not run at full speed or att all.
