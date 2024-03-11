@@ -26,7 +26,13 @@
 #include <tusb.h>
 
 #include "shared.h"
+#include "mytypes.h"
+#include "gamepad.h"
+#ifdef __cplusplus
 
+#include "ff.h"
+
+#endif
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 #ifndef DVICONFIG
@@ -34,6 +40,18 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 // #define DVICONFIG dviConfig_PicoDVISock
 #define DVICONFIG dviConfig_PimoroniDemoDVSock
 #endif
+
+#define ERRORMESSAGESIZE 40
+#define GAMESAVEDIR "/SAVES"
+util::ExclusiveProc exclProc_;
+char *ErrorMessage;
+bool isFatalError = false;
+static FATFS fs;
+char *romName;
+
+static bool fps_enabled = false;
+static uint32_t start_tick_us = 0;
+static uint32_t fps = 0;
 
 namespace
 {
@@ -64,8 +82,6 @@ namespace
     };
 
     std::unique_ptr<dvi::DVI> dvi_;
-
-    util::ExclusiveProc exclProc_;
 
     enum class ScreenMode
     {
@@ -108,6 +124,11 @@ namespace
 
         dvi_->setScanLine(scanLine);
     }
+    void screenMode(int incr)
+    {
+        screenMode_ = static_cast<ScreenMode>((static_cast<int>(screenMode_) + incr) & 3);
+        applyScreenMode();
+    }
 }
 
 namespace
@@ -148,7 +169,6 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     constexpr uint32_t meterScale = 160 * 65536 / (clocksPerLine * 2);
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
 }
-
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
@@ -198,7 +218,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
         break;
     default:
         b = 0;
-    } 
+    }
     // Store the RGB565 value in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
 }
@@ -210,7 +230,8 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // SMS renders 192 lines
 
     line += SCANLINEOFFSET;
-    if ( line < 4 ) return;
+    if (line < 4)
+        return;
     if (line == SCANLINEOFFSET)
     {
         // insert blank lines on top
@@ -303,7 +324,57 @@ void in_ram(core1_main)()
         exclProc_.processOrWaitIfExist();
     }
 }
+static DWORD prevButtons[2]{};
+static DWORD prevButtonssystem[2]{};
+static int rapidFireMask[2]{};
+static int rapidFireCounter = 0;
+void processinput()
+{
 
+    int smssystem[2]{};
+    for (int i = 0; i < 2; i++)
+    {
+        auto &gp = io::getCurrentGamePadState(i);
+        int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
+                         (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
+                         (gp.buttons & io::GamePadState::Button::UP ? INPUT_UP : 0) |
+                         (gp.buttons & io::GamePadState::Button::DOWN ? INPUT_DOWN : 0) |
+                         (gp.buttons & io::GamePadState::Button::A ? INPUT_BUTTON1 : 0) |
+                         (gp.buttons & io::GamePadState::Button::B ? INPUT_BUTTON2 : 0) | 0;
+
+        smssystem[i] =
+            (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
+            (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
+            0;
+
+        input.pad[i] = smsbuttons;
+        auto p1 = smssystem[i];
+
+        auto pushed = smsbuttons & ~prevButtons[i];
+        auto pushedsystem = smssystem[i] & ~prevButtonssystem[i];
+       
+        if (p1 & INPUT_START)
+        {
+             // Toggle frame rate display
+            if (pushed & INPUT_BUTTON1)
+            {
+                fps_enabled = !fps_enabled;
+                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
+            }
+            if (pushed & INPUT_UP)
+            {
+                screenMode(-1);
+            }
+            else if (pushed & INPUT_DOWN)
+            {
+                screenMode(+1);
+            }
+        }
+        prevButtons[i] = smsbuttons;
+        prevButtonssystem[i] = smssystem[i];
+    }
+    input.system = smssystem[0] | smssystem[1];
+}
 void in_ram(process)(void)
 {
     // TODO
@@ -313,7 +384,8 @@ void in_ram(process)(void)
     uint32_t frame = 0;
     while (true)
     {
-        // TODO Process input
+        processinput();
+
         sms_frame(0);
 
         // TODO Process audio
@@ -324,10 +396,10 @@ void in_ram(process)(void)
     }
 }
 
-/// @brief 
+/// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
 /// RelWithDebugInfo mode.
-/// @return 
+/// @return
 int main()
 {
     // Set voltage and clock frequency
@@ -341,15 +413,17 @@ int main()
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
         sleep_ms(500);
     }
-    
+
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
 
     // usb initialise
+    printf("USB Initialising\n");
     tusb_init();
     //
+    printf("Initialising DVI\n");
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
                                       dvi::getTiming640x480p60Hz());
     //    dvi_->setAudioFreq(48000, 25200, 6144);
@@ -377,6 +451,7 @@ int main()
     // Check the type of ROM
     // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
     // sms.console = CONSOLE_SMS; // For now, we only support SMS
+    printf("Loading ROM\n");
     load_rom();
 
     // fprintf(stdout, "CRC : %08X\n", cart.crc);
@@ -417,6 +492,7 @@ int main()
     // initialize
 
     system_reset();
+    printf("Starting game\n");
     process();
     return 0;
 }
