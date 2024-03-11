@@ -153,12 +153,11 @@ void __not_in_flash_func(drawWorkMeter)(int line)
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
     int r, g, b;
-    r = bitmap.pal.color[index][0];
-    g = bitmap.pal.color[index][1];
-    b = bitmap.pal.color[index][2];
-    // Render using the correct rgb color values
+    // Calculate the correct rgb color values
+    // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
+    // So 01 = 01000000 = 40, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
     // See https://segaretro.org/Palette
-    switch (r)
+    switch (bitmap.pal.color[index][0])
     {
     case 40:
         r = 85;
@@ -172,7 +171,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     default:
         r = 0;
     }
-    switch (g)
+    switch (bitmap.pal.color[index][1])
     {
     case 40:
         g = 85;
@@ -186,7 +185,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     default:
         g = 0;
     }
-    switch (b)
+    switch (bitmap.pal.color[index][2])
     {
     case 40:
         b = 85;
@@ -200,6 +199,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     default:
         b = 0;
     } 
+    // Store the RGB565 value in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
 }
 #define SCANLINEOFFSET 25
