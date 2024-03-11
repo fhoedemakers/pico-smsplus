@@ -12,6 +12,8 @@ pico_sdk_init()
 
 add_executable(${projectname}
     shell/main.cpp
+    hid_app.cpp
+    gamepad.cpp
 )
 
 pico_set_program_name(${projectname} "${projectname}")

@@ -319,7 +319,8 @@ void in_ram(process)(void)
         // TODO Process audio
         // printf("Frame %d\n", frame++);
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-        // gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame++, 60) & 1);
+        // Process USB
+        tuh_task();
     }
 }
 
@@ -335,18 +336,19 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 2; i++)
     {
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
-        sleep_ms(1000);
+        sleep_ms(500);
     }
-    //
-    printf("%x\n", CC(0x7FFF));
+    
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
 
+    // usb initialise
+    tusb_init();
     //
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
                                       dvi::getTiming640x480p60Hz());
