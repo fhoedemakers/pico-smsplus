@@ -1,7 +1,7 @@
 # pico-smsplus
 
 This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System emulator, for the Raspberry Pi Pico, and supports video and audio output over HDMI.
-The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](https://github.com/shuichitakano/pico-infones). 
+The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](https://github.com/shuichitakano/pico-infones) which in turn is based on [PicoDVI](https://github.com/Wren6991/PicoDVI).
 
 ## ROM
 The ROM should be placed in some way from 0x10080000, and can be easily transferred using [picotool](https://github.com/raspberrypi/picotool).
