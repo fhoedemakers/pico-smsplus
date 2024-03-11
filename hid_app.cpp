@@ -29,6 +29,11 @@ extern "C"
             return vid == 0x054c && pid == 0x0ce6;
         }
 
+        bool isNintendo(uint16_t vid, uint16_t pid)
+        {
+            return vid == 0x057e && ( pid == 0x2009 || pid == 0x2017);
+        }
+
         struct DS4Report
         {
             // https://www.psdevwiki.com/ps4/DS4-USB
@@ -155,6 +160,8 @@ extern "C"
                 gp.buttons =
                     (r->buttons1 & DS4Report::Button1::CROSS ? io::GamePadState::Button::B : 0) |
                     (r->buttons1 & DS4Report::Button1::CIRCLE ? io::GamePadState::Button::A : 0) |
+                    (r->buttons1 & DS4Report::Button1::TRIANGLE ? io::GamePadState::Button::X : 0) |
+                    (r->buttons1 & DS4Report::Button1::SQUARE ? io::GamePadState::Button::Y : 0) |
                     (r->buttons2 & DS4Report::Button2::SHARE ? io::GamePadState::Button::SELECT : 0) |
                     (r->tpad ? io::GamePadState::Button::SELECT : 0) |
                     (r->buttons2 & DS4Report::Button2::OPTIONS ? io::GamePadState::Button::START : 0);
@@ -188,6 +195,8 @@ extern "C"
                 gp.buttons =
                     (buttons & DS5Report::Button::CROSS ? io::GamePadState::Button::B : 0) |
                     (buttons & DS5Report::Button::CIRCLE ? io::GamePadState::Button::A : 0) |
+                    (buttons & DS5Report::Button::TRIANGLE ? io::GamePadState::Button::X : 0) |
+                    (buttons & DS5Report::Button::SQUARE ? io::GamePadState::Button::Y : 0) |
                     (buttons & (DS5Report::Button::SHARE | DS5Report::Button::TPAD) ? io::GamePadState::Button::SELECT : 0) |
                     (buttons & DS5Report::Button::OPTIONS ? io::GamePadState::Button::START : 0);
                 gp.hat = static_cast<io::GamePadState::Hat>(r->getHat());
@@ -199,6 +208,10 @@ extern "C"
                 printf("Invalid DS5 report size %zd\n", len);
                 return;
             }
+        }
+        else if (isNintendo(vid, pid))
+        {
+            printf("Nintendo: len = %d\n", len);
         }
         else
         {
