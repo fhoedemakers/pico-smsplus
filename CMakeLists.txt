@@ -11,7 +11,7 @@ project(${projectname} C CXX ASM)
 pico_sdk_init()
 
 add_executable(${projectname}
-    shell/main.cpp
+    main.cpp
     hid_app.cpp
     gamepad.cpp
 )
@@ -56,11 +56,10 @@ PRIVATE
 target_include_directories(${projectname}
 PRIVATE
     pico_lib
-    core
-    shell
+    smsplus
     .
 )
-add_subdirectory(core)
+add_subdirectory(smsplus)
 add_subdirectory(drivers/fatfs)
 add_subdirectory(drivers/sdcard)
 add_subdirectory(pico_lib/dvi)
