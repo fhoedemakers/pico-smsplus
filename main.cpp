@@ -53,6 +53,8 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 
+static int audio_buffer[SMS_AUD_RATE / SMS_FPS];
+
 namespace
 {
     constexpr uint32_t CPUFreqKHz = 252000;
@@ -352,10 +354,10 @@ void processinput()
 
         auto pushed = smsbuttons & ~prevButtons[i];
         auto pushedsystem = smssystem[i] & ~prevButtonssystem[i];
-       
+
         if (p1 & INPUT_START)
         {
-             // Toggle frame rate display
+            // Toggle frame rate display
             if (pushed & INPUT_BUTTON1)
             {
                 fps_enabled = !fps_enabled;
@@ -375,6 +377,17 @@ void processinput()
     }
     input.system = smssystem[0] | smssystem[1];
 }
+void in_ram(processaudio)(void)
+{
+    int soundbuffersize = dvi_->getAudioRingBuffer().getFullWritableSize();
+    printf("soundbuffersize: %d, snd.bufsize: %d\n", soundbuffersize, snd.bufsize);
+    // process audio
+    for (int x = 0; x < snd.bufsize; x++)
+    {
+        audio_buffer[x] = (snd.buffer[0][x] << 16) + snd.buffer[1][x];
+        // audio_buffer[x] = ((snd.buffer[0][x] + snd.buffer[1][x]) / 512) + 128;
+    }
+}
 void in_ram(process)(void)
 {
     // TODO
@@ -385,10 +398,8 @@ void in_ram(process)(void)
     while (true)
     {
         processinput();
-
         sms_frame(0);
-
-        // TODO Process audio
+        processaudio();
         // printf("Frame %d\n", frame++);
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
         // Process USB
@@ -441,7 +452,6 @@ int main()
     dvi_->getAudioRingBuffer().advanceWritePointer(255);
 
     multicore_launch_core1(core1_main);
-    // TODO usb initialise tusb_init();
 
     // TODO flash ROM
     // TODO Setup DV
