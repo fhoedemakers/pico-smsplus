@@ -52,7 +52,6 @@ char *romName;
 static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
-
 static int audio_buffer[SMS_AUD_RATE / SMS_FPS];
 
 namespace
@@ -264,13 +263,6 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             dvi_->setLineBuffer(bl, blank);
         }
     }
-
-#ifdef LINUX
-    if (line == BMP_HEIGHT + BMP_Y_OFFSET - 1)
-    {
-        s_core->getDisplay()->flip();
-    }
-#endif
 }
 
 void system_load_sram(void)
@@ -377,6 +369,48 @@ void processinput()
     }
     input.system = smssystem[0] | smssystem[1];
 }
+
+// int InfoNES_GetSoundBufferSize() {
+//     //printf("InfoNES_GetSoundBufferSize\r\n");
+//     return AUDIO_SAMPLES * sizeof(uint8_t);
+// }
+
+// void InfoNES_SoundOutput(int samples, BYTE *w1, BYTE *w2, BYTE *w3, BYTE *w4, BYTE *w5) {
+//     //printf("InfoNES_SoundOutput: samples = %i\r\n", samples);
+//     uint8_t byte;
+
+//     for (uint_fast32_t i = 0; i < samples; i++) {
+//         byte = (w1[i] + w2[i] + w3[i] + w4[i] + w5[i]) / 5;
+//         audio_buffer[audio_buffer_index] = (int16_t) ((byte << 8) - 32768); // U8 > S16
+//         audio_buffer_index++;
+//         if (audio_buffer_index == AUDIO_SAMPLES) {
+//             s_core->getAudio()->play(audio_buffer, AUDIO_SAMPLES);
+//             audio_buffer_index = 0;
+//         }
+//     }
+// }
+
+//   uint16_t m_rate = 44100;
+        // uint16_t m_samples = 735;
+        // uint8_t m_channels = 2;
+        // uint8_t m_volume = 50;
+        // uint8_t m_volume_max = 80;
+// void in_ram(PicoAudio::play)(const void *data, int samples) {
+//     auto buffer = take_audio_buffer(p_producer_pool, true);
+//     auto sampleBuffer = (int16_t *) buffer->buffer->bytes;
+//     if (m_volume == 100) {
+//         memcpy(sampleBuffer, data, samples * sizeof(int16_t) * m_channels);
+//     } else {
+//         auto dataBuffer = (int16_t *) data;
+//         for (uint_fast16_t i = 0; i < (uint_fast16_t) samples * m_channels; i++) {
+//             sampleBuffer[i] = (int16_t) ((dataBuffer[i] * m_volume) / 100);
+//         }
+//     }
+
+//     buffer->sample_count = samples;
+//     give_audio_buffer(p_producer_pool, buffer);
+// }
+
 void in_ram(processaudio)(void)
 {
     int soundbuffersize = dvi_->getAudioRingBuffer().getFullWritableSize();
@@ -388,7 +422,7 @@ void in_ram(processaudio)(void)
     sizeof(BYTE);
     int i = 0;
     while (samples) {
-        //printf("Samples: %d\n", samples);
+       
         auto &ring = dvi_->getAudioRingBuffer();
         auto n = std::min<int>(samples, ring.getWritableSize());
         if (!n)
@@ -401,38 +435,32 @@ void in_ram(processaudio)(void)
         
         while (ct--)
         {
-            
-            // int l = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
-            // int r = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
-            int l =snd.buffer[0][i]  << 4;
-            int r = snd.buffer[1][i] << 4;
+            sizeof(int);
+            int l = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
+            int r = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
             i++;	
-            // print l in hex with leading 0 and 8 characters
-            //
-            //if (l > 0) printf("ct: %d, l: %08x, r: %08x\n", ct, l, r);
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
         }
         ring.advanceWritePointer(n);
         samples -= n;
     }
-    //printf("soundbuffersize: %d, snd.bufsize: %d\n", soundbuffersize, snd.bufsize);
+    // process audio
+    //for (int x = 0; x < snd.bufsize; x++) {
+    //    audio_buffer[x] = (snd.buffer[0][x] << 16) + snd.buffer[1][x];
+        //audio_buffer[x] = ((snd.buffer[0][x] + snd.buffer[1][x]) / 512) + 128;
+    //}
+    //getAudio()->play((void *) &audio_buffer, snd.bufsize);
    
 }
 void in_ram(process)(void)
 {
-    // TODO
-#if !defined(NDEBUG)
-    printf("process()\n");
-#endif
     uint32_t frame = 0;
     while (true)
     {
         processinput();
         sms_frame(0);
         processaudio();
-        // printf("Frame %d\n", frame++);
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-        // Process USB
         tuh_task();
     }
 }
@@ -482,55 +510,17 @@ int main()
     dvi_->getAudioRingBuffer().advanceWritePointer(255);
 
     multicore_launch_core1(core1_main);
-
-    // TODO flash ROM
-    // TODO Setup DV
-    //
-    // TODO smsp_gamedata_set(argv[1]);
-    //
+    // smsp_gamedata_set(argv[1]);
     // Check the type of ROM
     // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
     // sms.console = CONSOLE_SMS; // For now, we only support SMS
+    //
     printf("Loading ROM\n");
     load_rom();
-
-    // fprintf(stdout, "CRC : %08X\n", cart.crc);
-    //  fprintf(stdout, "SHA1: %s\n", cart.sha1);
-    //   fprintf(stdout, "SHA1: ");
-    //   for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
-    //   	fprintf(stdout, "%02X", cart.sha1[i]);
-    //   }
-    //   fprintf(stdout, "\n");
-
-    // Set defaults. Is this needed?
-    // settings.video_scale = 2;
-    // settings.video_filter = 0;
-    // settings.audio_rate = 48000;
-    // settings.audio_fm = 1;
-    // settings.audio_fmtype = SND_EMU2413;
-    // settings.misc_region = TERRITORY_DOMESTIC;
-    // settings.misc_ffspeed = 2;
-
-    // TODO
-    // Override settings set in the .ini
-    // gbIniError err = gb_ini_parse("smsplus.ini", &smsp_ini_handler, &settings);
-    // if (err.type != GB_INI_ERROR_NONE) {
-    // 	fprintf(stderr, "Error: No smsplus.ini file found.\n");
-    // }
-
-    // sms.territory = settings.misc_region;
-    // if (sms.console != CONSOLE_GG) { sms.use_fm = settings.audio_fm; }
-
     // Initialize all systems and power on
-
-    // init sms
     system_init(SMS_AUD_RATE);
-
     // load state if any
     // system_load_state();
-
-    // initialize
-
     system_reset();
     printf("Starting game\n");
     process();
