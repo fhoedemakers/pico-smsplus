@@ -413,12 +413,19 @@ void processinput()
 
 void in_ram(processaudio)(void)
 {
-    int soundbuffersize = dvi_->getAudioRingBuffer().getFullWritableSize();
-    int samples = snd.bufsize;
+    uint8_t m_channels = 2;
+    uint8_t m_volume = 50;
+    uint8_t m_volume_max = 80;
+    for (int x = 0; x < snd.bufsize; x++) {
+       audio_buffer[x] = (snd.buffer[0][x] << 16) + snd.buffer[1][x];
+       //audio_buffer[x] = ((snd.buffer[0][x] + snd.buffer[1][x]) / 512) + 128;
+    }
+
+    short *wave = (short *)audio_buffer;
+    // ?  int soundbuffersize = dvi_->getAudioRingBuffer().getFullWritableSize();
+    int samples = snd.bufsize * m_channels;;
     sizeof(short);
-    sizeof(int);
-    short *buf1 = snd.buffer[0];
-    short *buf2 = snd.buffer[1];
+    sizeof(int);  
     sizeof(BYTE);
     int i = 0;
     while (samples) {
@@ -435,20 +442,13 @@ void in_ram(processaudio)(void)
         
         while (ct--)
         {
-            sizeof(int);
-            int l = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
-            int r = (snd.buffer[0][i]<< 16) + (snd.buffer[1][i]);
-            i++;	
+            short l = (int16_t) ((*wave++ * m_volume) / 100);
+            short r = l;
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
         }
         ring.advanceWritePointer(n);
         samples -= n;
-    }
-    // process audio
-    //for (int x = 0; x < snd.bufsize; x++) {
-    //    audio_buffer[x] = (snd.buffer[0][x] << 16) + snd.buffer[1][x];
-        //audio_buffer[x] = ((snd.buffer[0][x] + snd.buffer[1][x]) / 512) + 128;
-    //}
+    }    
     //getAudio()->play((void *) &audio_buffer, snd.bufsize);
    
 }
