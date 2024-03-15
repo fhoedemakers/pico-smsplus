@@ -26,7 +26,13 @@
 #include <tusb.h>
 
 #include "shared.h"
+#include "mytypes.h"
+#include "gamepad.h"
+#ifdef __cplusplus
 
+#include "ff.h"
+
+#endif
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 #ifndef DVICONFIG
@@ -34,6 +40,18 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 // #define DVICONFIG dviConfig_PicoDVISock
 #define DVICONFIG dviConfig_PimoroniDemoDVSock
 #endif
+
+#define ERRORMESSAGESIZE 40
+#define GAMESAVEDIR "/SAVES"
+util::ExclusiveProc exclProc_;
+char *ErrorMessage;
+bool isFatalError = false;
+static FATFS fs;
+char *romName;
+
+static bool fps_enabled = false;
+static uint32_t start_tick_us = 0;
+static uint32_t fps = 0;
 
 namespace
 {
@@ -64,8 +82,6 @@ namespace
     };
 
     std::unique_ptr<dvi::DVI> dvi_;
-
-    util::ExclusiveProc exclProc_;
 
     enum class ScreenMode
     {
@@ -108,6 +124,11 @@ namespace
 
         dvi_->setScanLine(scanLine);
     }
+    void screenMode(int incr)
+    {
+        screenMode_ = static_cast<ScreenMode>((static_cast<int>(screenMode_) + incr) & 3);
+        applyScreenMode();
+    }
 }
 
 namespace
@@ -149,6 +170,46 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
 }
 
+int sampleIndex = 0;
+void in_ram(processaudio)(int offset)
+{
+    int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
+    if (offset == 0)
+    {
+        sampleIndex = 0;
+    }
+    else
+    {
+        sampleIndex += samples;
+        if (sampleIndex >= 735)
+        {
+            return;
+        }
+    }
+    short *p1 = snd.buffer[0] + sampleIndex;
+    short *p2 = snd.buffer[1] + sampleIndex;
+    while (samples)
+    {
+        auto &ring = dvi_->getAudioRingBuffer();
+        auto n = std::min<int>(samples, ring.getWritableSize());
+        if (!n)
+        {
+            return;
+        }
+        auto p = ring.getWritePointer();
+        int ct = n;
+        while (ct--)
+        {
+            int l = (*p1++ << 16) + *p2++;
+            // works also : int l = (*p1++ + *p2++) / 2;
+            int r = l;
+            // int l = *wave1++;
+            *p++ = {static_cast<short>(l), static_cast<short>(r)};
+        }
+        ring.advanceWritePointer(n);
+        samples -= n;
+    }
+}
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
@@ -198,7 +259,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
         break;
     default:
         b = 0;
-    } 
+    }
     // Store the RGB565 value in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
 }
@@ -209,8 +270,11 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // screen Line 4 - 235 are the visible screen
     // SMS renders 192 lines
 
+    // Audio needs to be processed per scanline
+    processaudio(line);
     line += SCANLINEOFFSET;
-    if ( line < 4 ) return;
+    if (line < 4)
+        return;
     if (line == SCANLINEOFFSET)
     {
         // insert blank lines on top
@@ -241,13 +305,6 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             dvi_->setLineBuffer(bl, blank);
         }
     }
-
-#ifdef LINUX
-    if (line == BMP_HEIGHT + BMP_Y_OFFSET - 1)
-    {
-        s_core->getDisplay()->flip();
-    }
-#endif
 }
 
 void system_load_sram(void)
@@ -303,30 +360,73 @@ void in_ram(core1_main)()
         exclProc_.processOrWaitIfExist();
     }
 }
+static DWORD prevButtons[2]{};
+static DWORD prevButtonssystem[2]{};
+static int rapidFireMask[2]{};
+static int rapidFireCounter = 0;
+void processinput()
+{
+
+    int smssystem[2]{};
+    for (int i = 0; i < 2; i++)
+    {
+        auto &gp = io::getCurrentGamePadState(i);
+        int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
+                         (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
+                         (gp.buttons & io::GamePadState::Button::UP ? INPUT_UP : 0) |
+                         (gp.buttons & io::GamePadState::Button::DOWN ? INPUT_DOWN : 0) |
+                         (gp.buttons & io::GamePadState::Button::A ? INPUT_BUTTON1 : 0) |
+                         (gp.buttons & io::GamePadState::Button::B ? INPUT_BUTTON2 : 0) | 0;
+
+        smssystem[i] =
+            (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
+            (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
+            0;
+
+        input.pad[i] = smsbuttons;
+        auto p1 = smssystem[i];
+
+        auto pushed = smsbuttons & ~prevButtons[i];
+        auto pushedsystem = smssystem[i] & ~prevButtonssystem[i];
+
+        if (p1 & INPUT_START)
+        {
+            // Toggle frame rate display
+            if (pushed & INPUT_BUTTON1)
+            {
+                fps_enabled = !fps_enabled;
+                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
+            }
+            if (pushed & INPUT_UP)
+            {
+                screenMode(-1);
+            }
+            else if (pushed & INPUT_DOWN)
+            {
+                screenMode(+1);
+            }
+        }
+        prevButtons[i] = smsbuttons;
+        prevButtonssystem[i] = smssystem[i];
+    }
+    input.system = smssystem[0] | smssystem[1];
+}
 
 void in_ram(process)(void)
 {
-    // TODO
-#if !defined(NDEBUG)
-    printf("process()\n");
-#endif
-    uint32_t frame = 0;
     while (true)
     {
-        // TODO Process input
+        processinput();
         sms_frame(0);
-
-        // TODO Process audio
-        // printf("Frame %d\n", frame++);
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-        // gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(frame++, 60) & 1);
+        tuh_task();
     }
 }
 
-/// @brief 
+/// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
 /// RelWithDebugInfo mode.
-/// @return 
+/// @return
 int main()
 {
     // Set voltage and clock frequency
@@ -335,17 +435,21 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 2; i++)
     {
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
-        sleep_ms(1000);
+        sleep_ms(500);
     }
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
 
+    // usb initialise
+    printf("USB Initialising\n");
+    tusb_init();
     //
+    printf("Initialising DVI\n");
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
                                       dvi::getTiming640x480p60Hz());
     //    dvi_->setAudioFreq(48000, 25200, 6144);
@@ -363,56 +467,19 @@ int main()
     dvi_->getAudioRingBuffer().advanceWritePointer(255);
 
     multicore_launch_core1(core1_main);
-    // TODO usb initialise tusb_init();
-
-    // TODO flash ROM
-    // TODO Setup DV
-    //
-    // TODO smsp_gamedata_set(argv[1]);
-    //
+    // smsp_gamedata_set(argv[1]);
     // Check the type of ROM
     // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
     // sms.console = CONSOLE_SMS; // For now, we only support SMS
+    //
+    printf("Loading ROM\n");
     load_rom();
-
-    // fprintf(stdout, "CRC : %08X\n", cart.crc);
-    //  fprintf(stdout, "SHA1: %s\n", cart.sha1);
-    //   fprintf(stdout, "SHA1: ");
-    //   for (int i = 0; i < SHA1_DIGEST_SIZE; i++) {
-    //   	fprintf(stdout, "%02X", cart.sha1[i]);
-    //   }
-    //   fprintf(stdout, "\n");
-
-    // Set defaults. Is this needed?
-    // settings.video_scale = 2;
-    // settings.video_filter = 0;
-    // settings.audio_rate = 48000;
-    // settings.audio_fm = 1;
-    // settings.audio_fmtype = SND_EMU2413;
-    // settings.misc_region = TERRITORY_DOMESTIC;
-    // settings.misc_ffspeed = 2;
-
-    // TODO
-    // Override settings set in the .ini
-    // gbIniError err = gb_ini_parse("smsplus.ini", &smsp_ini_handler, &settings);
-    // if (err.type != GB_INI_ERROR_NONE) {
-    // 	fprintf(stderr, "Error: No smsplus.ini file found.\n");
-    // }
-
-    // sms.territory = settings.misc_region;
-    // if (sms.console != CONSOLE_GG) { sms.use_fm = settings.audio_fm; }
-
     // Initialize all systems and power on
-
-    // init sms
     system_init(SMS_AUD_RATE);
-
     // load state if any
     // system_load_state();
-
-    // initialize
-
     system_reset();
+    printf("Starting game\n");
     process();
     return 0;
 }
