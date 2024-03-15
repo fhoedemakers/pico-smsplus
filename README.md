@@ -12,7 +12,7 @@ picotool load foo.sms -t bin -o 0x10080000
 ## Video
 Click on image below to see a demo video.
 
-[![Video](https://img.youtube.com/vi/7Hi5HdAcsqc/0.jpg)](https://www.youtube.com/watch?v=7Hi5HdAcsqc)
+[![Video](https://img.youtube.com/vi/__E8h2Ay3g8/0.jpg)](https://www.youtube.com/watch?v=__E8h2Ay3g8)
 
 ## Work in progress
 
@@ -34,7 +34,7 @@ Things to do (if possible):
 ## Building
 I use Visual Studio Code on a Raspberry PI 400. Make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.
 
-## Controller
+## Supported USB controller
 The following controllers are supported.
 
 - BUFFALO BGC-FC801
