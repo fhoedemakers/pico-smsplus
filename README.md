@@ -21,7 +21,7 @@ This is a work in progress, and there are still some issues to be fixed. The vid
 Things to do (if possible):
 
 - [ ] Improve video rendering
-- [x] Implement audio (but needs improvment)
+- [x] Implement audio (but needs improvement)
 - [ ] Improve performance
 - [x] USB Controller support
 - [ ] Nes controller support
