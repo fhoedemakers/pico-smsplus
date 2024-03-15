@@ -21,10 +21,15 @@ This is a work in progress, and there are still some issues to be fixed. The vid
 Things to do (if possible):
 
 - [ ] Improve video rendering
-- [ ] Implement audio
+- [x] Implement audio (but needs improvment)
 - [ ] Improve performance
-- [ ] Controller support
+- [x] USB Controller support
+- [ ] Nes controller support
+- [ ] WII-controller support
 - [ ] SD card support.
 - [ ] Menu to select and play ROMs from the SD card.
 - [ ] Save states
 - [ ] Game Gear support
+
+## Building
+I use Visual Studio Code on a Raspberry PI 400. Make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.

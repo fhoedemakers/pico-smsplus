@@ -52,7 +52,6 @@ char *romName;
 static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
-static int audio_buffer[SMS_AUD_RATE / SMS_FPS];
 
 namespace
 {
@@ -171,6 +170,47 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
 }
 
+int sampleIndex = 0;
+void in_ram(processaudio)(int offset)
+{
+    int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
+    if (offset == 0)
+    {
+        sampleIndex = 0;
+    }
+    else
+    {
+        sampleIndex += samples;
+        if (sampleIndex >= 735)
+        {
+            return;
+        }
+    }
+    short *p1 = snd.buffer[0] + sampleIndex;
+    short *p2 = snd.buffer[1] + sampleIndex;
+    while (samples)
+    {
+        auto &ring = dvi_->getAudioRingBuffer();
+        auto n = std::min<int>(samples, ring.getWritableSize());
+        if (!n)
+        {
+            return;
+        }
+        auto p = ring.getWritePointer();
+        int ct = n;
+        while (ct--)
+        {
+            int l = (*p1++ << 16) + *p2++;
+            // works also : int l = (*p1++ + *p2++) / 2;
+            int r = l;
+            // int l = *wave1++;
+            *p++ = {static_cast<short>(l), static_cast<short>(r)};
+        }
+        ring.advanceWritePointer(n);
+        samples -= n;
+    }
+}
+
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
     int r, g, b;
@@ -230,6 +270,8 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // screen Line 4 - 235 are the visible screen
     // SMS renders 192 lines
 
+    // Audio needs to be processed per scanline
+    processaudio(line);
     line += SCANLINEOFFSET;
     if (line < 4)
         return;
@@ -370,96 +412,12 @@ void processinput()
     input.system = smssystem[0] | smssystem[1];
 }
 
-// int InfoNES_GetSoundBufferSize() {
-//     //printf("InfoNES_GetSoundBufferSize\r\n");
-//     return AUDIO_SAMPLES * sizeof(uint8_t);
-// }
-
-// void InfoNES_SoundOutput(int samples, BYTE *w1, BYTE *w2, BYTE *w3, BYTE *w4, BYTE *w5) {
-//     //printf("InfoNES_SoundOutput: samples = %i\r\n", samples);
-//     uint8_t byte;
-
-//     for (uint_fast32_t i = 0; i < samples; i++) {
-//         byte = (w1[i] + w2[i] + w3[i] + w4[i] + w5[i]) / 5;
-//         audio_buffer[audio_buffer_index] = (int16_t) ((byte << 8) - 32768); // U8 > S16
-//         audio_buffer_index++;
-//         if (audio_buffer_index == AUDIO_SAMPLES) {
-//             s_core->getAudio()->play(audio_buffer, AUDIO_SAMPLES);
-//             audio_buffer_index = 0;
-//         }
-//     }
-// }
-
-//   uint16_t m_rate = 44100;
-        // uint16_t m_samples = 735;
-        // uint8_t m_channels = 2;
-        // uint8_t m_volume = 50;
-        // uint8_t m_volume_max = 80;
-// void in_ram(PicoAudio::play)(const void *data, int samples) {
-//     auto buffer = take_audio_buffer(p_producer_pool, true);
-//     auto sampleBuffer = (int16_t *) buffer->buffer->bytes;
-//     if (m_volume == 100) {
-//         memcpy(sampleBuffer, data, samples * sizeof(int16_t) * m_channels);
-//     } else {
-//         auto dataBuffer = (int16_t *) data;
-//         for (uint_fast16_t i = 0; i < (uint_fast16_t) samples * m_channels; i++) {
-//             sampleBuffer[i] = (int16_t) ((dataBuffer[i] * m_volume) / 100);
-//         }
-//     }
-
-//     buffer->sample_count = samples;
-//     give_audio_buffer(p_producer_pool, buffer);
-// }
-
-void in_ram(processaudio)(void)
-{
-    uint8_t m_channels = 2;
-    uint8_t m_volume = 50;
-    uint8_t m_volume_max = 80;
-    for (int x = 0; x < snd.bufsize; x++) {
-       audio_buffer[x] = (snd.buffer[0][x] << 16) + snd.buffer[1][x];
-       //audio_buffer[x] = ((snd.buffer[0][x] + snd.buffer[1][x]) / 512) + 128;
-    }
-
-    short *wave = (short *)audio_buffer;
-    // ?  int soundbuffersize = dvi_->getAudioRingBuffer().getFullWritableSize();
-    int samples = snd.bufsize * m_channels;;
-    sizeof(short);
-    sizeof(int);  
-    sizeof(BYTE);
-    int i = 0;
-    while (samples) {
-       
-        auto &ring = dvi_->getAudioRingBuffer();
-        auto n = std::min<int>(samples, ring.getWritableSize());
-        if (!n)
-        {
-            return;
-        }
-        auto p = ring.getWritePointer();
-
-        int ct = n;
-        
-        while (ct--)
-        {
-            short l = (int16_t) ((*wave++ * m_volume) / 100);
-            short r = l;
-            *p++ = {static_cast<short>(l), static_cast<short>(r)};
-        }
-        ring.advanceWritePointer(n);
-        samples -= n;
-    }    
-    //getAudio()->play((void *) &audio_buffer, snd.bufsize);
-   
-}
 void in_ram(process)(void)
 {
-    uint32_t frame = 0;
     while (true)
     {
         processinput();
         sms_frame(0);
-        processaudio();
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
         tuh_task();
     }
