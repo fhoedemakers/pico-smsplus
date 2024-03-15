@@ -33,3 +33,12 @@ Things to do (if possible):
 
 ## Building
 I use Visual Studio Code on a Raspberry PI 400. Make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.
+
+## Controller
+The following controllers are supported.
+
+- BUFFALO BGC-FC801
+- SONY DUALSHOCK 4
+- SONY DualSense
+
+more to come.
