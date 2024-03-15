@@ -440,7 +440,6 @@ int main()
         printf("Hello, world! The master system emulator is starting...(%d)\n", i);
         sleep_ms(500);
     }
-
     printf("Starting Master System Emulator\n");
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
