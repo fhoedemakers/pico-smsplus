@@ -33,7 +33,10 @@
 #include "ff.h"
 
 #endif
-const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+
+#if LED_DISABLED == 0
+const uint LED_PIN = LED_GPIO_PIN;
+#endif
 
 #ifndef DVICONFIG
 // #define DVICONFIG dviConfig_PicoDVI
@@ -418,7 +421,9 @@ void in_ram(process)(void)
     {
         processinput();
         sms_frame(0);
+#if LED_DISABLED == 0
         gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
+#endif
         tuh_task();
     }
 }
@@ -441,9 +446,12 @@ int main()
         sleep_ms(500);
     }
     printf("Starting Master System Emulator\n");
+
+#if LED_DISABLED == 0   
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
+#endif
 
     // usb initialise
     printf("USB Initialising\n");
