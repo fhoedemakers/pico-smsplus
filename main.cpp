@@ -173,6 +173,57 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
 }
 
+bool initSDCard()
+{
+    FRESULT fr;
+    TCHAR str[40];
+    sleep_ms(1000);
+
+    printf("Mounting SDcard");
+    fr = f_mount(&fs, "", 1);
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "SD card mount error: %d", fr);
+        printf("%s\n", ErrorMessage);
+        return false;
+    }
+    printf("\n");
+
+    fr = f_chdir("/");
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot change dir to / : %d", fr);
+        printf("%s\n", ErrorMessage);
+        return false;
+    }
+    // for f_getcwd to work, set
+    //   #define FF_FS_RPATH		2
+    // in drivers/fatfs/ffconf.h
+    fr = f_getcwd(str, sizeof(str));
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot get current dir: %d", fr);
+        printf("%s\n", ErrorMessage);
+        return false;
+    }
+    printf("Current directory: %s\n", str);
+    printf("Creating directory %s\n", GAMESAVEDIR);
+    fr = f_mkdir(GAMESAVEDIR);
+    if (fr != FR_OK)
+    {
+        if (fr == FR_EXIST)
+        {
+            printf("Directory already exists.\n");
+        }
+        else
+        {
+            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot create dir %s: %d", GAMESAVEDIR, fr);
+            printf("%s\n", ErrorMessage);
+            return false;
+        }
+    }
+    return true;
+}
 int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
@@ -452,6 +503,8 @@ int main()
     // usb initialise
     printf("USB Initialising\n");
     tusb_init();
+    isFatalError = !initSDCard();
+ 
     //
     printf("Initialising DVI\n");
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
