@@ -440,11 +440,7 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    for (int i = 0; i < 2; i++)
-    {
-        printf("Hello, world! The master system emulator is starting...(%d)\n", i);
-        sleep_ms(500);
-    }
+    sleep_ms(500);
     printf("Starting Master System Emulator\n");
 
 #if LED_DISABLED == 0   
