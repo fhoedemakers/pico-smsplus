@@ -12,17 +12,17 @@ cd `dirname $0` || exit 1
 [ -d releases ] || mkdir releases || exit 1
 #. ./checksdk.sh
 ./build.sh
-if [ -f build/piconesPlus.uf2 ] ; then
+if [ -f build/picosmsPlus.uf2 ] ; then
 	cp build/picosmsPlus.uf2 releases/picosmsPlusimoroniDV.uf2 || exit 1
 fi
 cd `dirname $0` || exit 1
 ./build_alternate.sh
-if [ -f build/piconesPlus.uf2 ] ; then
+if [ -f build/picosmsPlus.uf2 ] ; then
 	cp build/picosmsPlus.uf2 releases/picosmsPlusAdaFruitDVISD.uf2 || exit 1
 fi
 cd `dirname $0` || exit 1
 ./build_feather_dvi.sh
-if [ -f build/piconesPlus.uf2 ] ; then
+if [ -f build/picosmsPlus.uf2 ] ; then
 	cp build/picosmsPlus.uf2 releases/picosmsPlusFeatherDVI.uf2 || exit 1
 fi
 ls -l releases
