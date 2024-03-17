@@ -93,6 +93,9 @@ add_executable(${projectname}
     main.cpp
     hid_app.cpp
     gamepad.cpp
+    menu.cpp 
+    RomLister.cpp
+    FrensHelpers.cpp
 )
 
 pico_set_program_name(${projectname} "${projectname}")
