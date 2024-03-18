@@ -295,7 +295,7 @@ void showSplashScreen()
         processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
         if (PAD1_Latch > 0 || (frameCount - startFrame) > 1000)
         {
-           // return;
+             return;
         }
         if ((frameCount % 30) == 0)
         {
