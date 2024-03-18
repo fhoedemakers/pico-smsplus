@@ -362,16 +362,6 @@ static uintptr_t FLASH_ADDRESS;
 static bool errorInSavingRom = false;
 static char *globalErrorMessage;
 
-bool showSplash()
-{
-    static bool splash = true;
-    if (splash)
-    {
-        splash = false;
-        return true;
-    }
-    return false;
-}
 
 //
 BYTE dirbuffer[10 * 1024];
@@ -396,7 +386,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     // Borrow ChrBuffer to store directory contents
     // void *buffer = InfoNes_GetChrBuf(&chr_size);
     Frens::RomLister romlister(dirbuffer, sizeof(dirbuffer));
-
+    clearinput();
     if (strlen(errorMessage) > 0)
     {
         if (isFatal) // SD card not working, show error
@@ -410,13 +400,10 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     }
     else
     {
-        if (showSplash() && ! reset)
+        // Show splash screen, only when not reset from emulation
+        if ( reset == false )
         {
             showSplashScreen();
-        }
-        else
-        {
-            clearinput();
         }
     }
     romlister.list("/");
