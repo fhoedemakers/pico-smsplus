@@ -244,29 +244,27 @@ void showSplashScreen()
     char s[SCREEN_COLS];
     ClearScreen(screenBuffer, bgcolor);
 
-    strcpy(s, "Pico-Info");
+    strcpy(s, "Pico-");
     putText(SCREEN_COLS / 2 - (strlen(s) + 4) / 2, 2, s, fgcolor, bgcolor);
 
-    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 7, 2, "N", CRED, bgcolor);
-    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 8, 2, "E", CGREEN, bgcolor);
-    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 9, 2, "S", CBLUE, bgcolor);
-    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 10, 2, "+", fgcolor, bgcolor);
+    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 3, 2, "S", CRED, bgcolor);
+    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 4, 2, "M", CGREEN, bgcolor);
+    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 5, 2, "S", CBLUE, bgcolor);
+    putText((SCREEN_COLS / 2 - (strlen(s)) / 2) + 6, 2, "+", fgcolor, bgcolor);
 
-    strcpy(s, "NES emulator for RP2040");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 3, s, fgcolor, bgcolor);
-    strcpy(s, "Emulator");
+    strcpy(s, "Sega Master System");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 4, s, fgcolor, bgcolor);
+    strcpy(s, "emulator for RP2040");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 5, s, fgcolor, bgcolor);
-    strcpy(s, "@jay_kumogata");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 6, s, CLIGHTBLUE, bgcolor);
-
+   
     strcpy(s, "Pico Port");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 9, s, fgcolor, bgcolor);
-    strcpy(s, "@shuichi_takano");
+    strcpy(s, "@frenskefrens");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 10, s, CLIGHTBLUE, bgcolor);
 
-    strcpy(s, "Menu System & SD Card Support");
+    strcpy(s, "DVI Support");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 13, s, fgcolor, bgcolor);
-    strcpy(s, "@frenskefrens");
+    strcpy(s, "@shuichi_takano");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 14, s, CLIGHTBLUE, bgcolor);
 
     strcpy(s, "(S)NES/WII controller support");
@@ -297,7 +295,7 @@ void showSplashScreen()
         processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
         if (PAD1_Latch > 0 || (frameCount - startFrame) > 1000)
         {
-            return;
+           // return;
         }
         if ((frameCount % 30) == 0)
         {
