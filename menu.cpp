@@ -402,7 +402,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
         if ( reset == false )
         {
             showSplashScreen();
-        }
+        } else sleep_ms(300);
     }
     romlister.list("/");
     displayRoms(romlister, firstVisibleRowINDEX);
