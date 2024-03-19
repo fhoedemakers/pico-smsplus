@@ -64,6 +64,17 @@ static uint32_t fps = 0;
 
 bool reset = false;
 
+// 16 bit palette
+const int __not_in_flash_func(SMSPalette)[64] = {
+    0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
+    0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
+    0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00AA55, 0x55AA55, 0xAAAA55, 0xFFAA55,
+    0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00, 0x00FF55, 0x55FF55, 0xAAFF55, 0xFFFF55,
+    0x0000AA, 0x5500AA, 0xAA00AA, 0xFF00AA, 0x0000FF, 0x5500FF, 0xAA00FF, 0xFF00FF,
+    0x0055AA, 0x5555AA, 0xAA55AA, 0xFF55AA, 0x00FF55, 0x5555FF, 0xAA55FF, 0xFF55FF,
+    0x00AAAA, 0x55AAAA, 0xAAAAAA, 0xFFAAAA, 0x00AAFF, 0x55AAFF, 0xAAAAFF, 0xFFAAFF,
+    0x00FFAA, 0x55FFAA, 0xAAFFAA, 0xFFFFAA, 0x00FFFF, 0x55FFFF, 0xAAFFFF, 0xFFFFFF};
+
 namespace
 {
     constexpr uint32_t CPUFreqKHz = 252000;
@@ -282,6 +293,12 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
     // So 01 = 01000000 = 40, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
     // See https://segaretro.org/Palette
+    // r =  bitmap.pal.color[index][0] << 0;
+    // g =  bitmap.pal.color[index][1] << 2;
+    // b =  bitmap.pal.color[index][2] << 4;
+    // // Store the RGB565 value in the palette
+    // int index = r | g | b;
+
     switch (bitmap.pal.color[index][0])
     {
     case 40:
@@ -324,6 +341,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     default:
         b = 0;
     }
+
     // Store the RGB565 value in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
 }
@@ -499,12 +517,13 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             pushed = smsbuttons;
             pushedsystem = smssystem[i];
         }
-        if ( p1 & INPUT_PAUSE ) {
-            if (pushedsystem & INPUT_START) {
+        if (p1 & INPUT_PAUSE)
+        {
+            if (pushedsystem & INPUT_START)
+            {
                 reset = true;
                 printf("Reset pressed\n");
             }
-
         }
         if (p1 & INPUT_START)
         {
@@ -566,7 +585,7 @@ int main()
     FRESULT fr;
     FRESULT fr2;
     size_t tmpSize;
-    
+
     ErrorMessage = errMSG;
     // Set voltage and clock frequency
     vreg_set_voltage(VREG_VOLTAGE_1_20);
