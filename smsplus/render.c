@@ -625,7 +625,7 @@ void in_ram(palette_sync)(int index)
     bitmap.pal.color[index][0] = r;
     bitmap.pal.color[index][1] = g;
     bitmap.pal.color[index][2] = b;
-    
+    // FH bitmap.pal.colorindex[index] = vdp.cram[index];
     pixel[index] = MAKE_PIXEL(r, g, b);
 
     bitmap.pal.dirty[index] = bitmap.pal.update = 1;

@@ -64,27 +64,27 @@ static uint32_t fps = 0;
 
 bool reset = false;
 
-// 16 bit palette
-const int __not_in_flash_func(SMSPalette)[64] = {
-    0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
-    0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
-    0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00AA55, 0x55AA55, 0xAAAA55, 0xFFAA55,
-    0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00, 0x00FF55, 0x55FF55, 0xAAFF55, 0xFFFF55,
-    0x0000AA, 0x5500AA, 0xAA00AA, 0xFF00AA, 0x0000FF, 0x5500FF, 0xAA00FF, 0xFF00FF,
-    0x0055AA, 0x5555AA, 0xAA55AA, 0xFF55AA, 0x00FF55, 0x5555FF, 0xAA55FF, 0xFF55FF,
-    0x00AAAA, 0x55AAAA, 0xAAAAAA, 0xFFAAAA, 0x00AAFF, 0x55AAFF, 0xAAAAFF, 0xFFAAFF,
-    0x00FFAA, 0x55FFAA, 0xAAFFAA, 0xFFFFAA, 0x00FFFF, 0x55FFFF, 0xAAFFFF, 0xFFFFFF};
+
+// const int __not_in_flash_func(SMSPalette)[64] = {
+//     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
+//     0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
+//     0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00AA55, 0x55AA55, 0xAAAA55, 0xFFAA55,
+//     0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00, 0x00FF55, 0x55FF55, 0xAAFF55, 0xFFFF55,
+//     0x0000AA, 0x5500AA, 0xAA00AA, 0xFF00AA, 0x0000FF, 0x5500FF, 0xAA00FF, 0xFF00FF,
+//     0x0055AA, 0x5555AA, 0xAA55AA, 0xFF55AA, 0x00FF55, 0x5555FF, 0xAA55FF, 0xFF55FF,
+//     0x00AAAA, 0x55AAAA, 0xAAAAAA, 0xFFAAAA, 0x00AAFF, 0x55AAFF, 0xAAAAFF, 0xFFAAFF,
+//     0x00FFAA, 0x55FFAA, 0xAAFFAA, 0xFFFFAA, 0x00FFFF, 0x55FFFF, 0xAAFFFF, 0xFFFFFF};
 
 // https://en.wikipedia.org/wiki/List_of_video_game_console_palettes
-const int __not_in_flash_func(SMSPalette2)[64] = {
-    0x000000, 0x000055, 0x0000AA, 0x0000FF, 0x550000, 0x550055, 0x5500AA, 0x5500FF,
-    0xAA0000, 0xAA0055, 0xAA00AA, 0xAA00FF, 0xFF0000, 0xFF0055, 0xFF00AA, 0xFF00FF,
-    0x005500, 0x005555, 0x0055AA, 0x0055FF, 0x555500, 0x555555, 0x5555AA, 0x5555FF,
-    0xAA5500, 0xAA5555, 0xAA55AA, 0xAA55FF, 0xFF5500, 0xFF5555, 0xFF55AA, 0xFF55FF,
-    0x00AA00, 0x00AA55, 0x00AAAA, 0x00AAFF, 0x55AA00, 0x55AA55, 0x55AAAA, 0x55AAFF,
-    0xAAAA00, 0xAAAA555, 0xAAAAAA, 0xAAAAFF, 0xFFAA00, 0xFFAA55, 0xFFAAAA, 0xFFAAFF,
-    0x00FF00, 0x00FF55, 0x00FFAA, 0x00FFFF, 0x55FF00, 0x55FF55, 0x55FFAA, 0x55FFFF,
-    0xAAFF00, 0xAAFF55, 0xAAFFAA, 0xAAFFFF, 0xFFFF00, 0xFFFF55, 0xFFFFAA, 0xFFFFFF};
+// const int __not_in_flash_func(SMSPalette)[64] = {
+//     0x000000, 0x000055, 0x0000AA, 0x0000FF, 0x550000, 0x550055, 0x5500AA, 0x5500FF,
+//     0xAA0000, 0xAA0055, 0xAA00AA, 0xAA00FF, 0xFF0000, 0xFF0055, 0xFF00AA, 0xFF00FF,
+//     0x005500, 0x005555, 0x0055AA, 0x0055FF, 0x555500, 0x555555, 0x5555AA, 0x5555FF,
+//     0xAA5500, 0xAA5555, 0xAA55AA, 0xAA55FF, 0xFF5500, 0xFF5555, 0xFF55AA, 0xFF55FF,
+//     0x00AA00, 0x00AA55, 0x00AAAA, 0x00AAFF, 0x55AA00, 0x55AA55, 0x55AAAA, 0x55AAFF,
+//     0xAAAA00, 0xAAAA555, 0xAAAAAA, 0xAAAAFF, 0xFFAA00, 0xFFAA55, 0xFFAAAA, 0xFFAAFF,
+//     0x00FF00, 0x00FF55, 0x00FFAA, 0x00FFFF, 0x55FF00, 0x55FF55, 0x55FFAA, 0x55FFFF,
+//     0xAAFF00, 0xAAFF55, 0xAAFFAA, 0xAAFFFF, 0xFFFF00, 0xFFFF55, 0xFFFFAA, 0xFFFFFF};
 
 namespace
 {
@@ -129,7 +129,7 @@ namespace
     void applyScreenMode()
     {
         bool scanLine = false;
-
+        printf("Screen mode: %d\n", static_cast<int>(screenMode_));
         switch (screenMode_)
         {
         case ScreenMode::SCANLINE_1_1:
@@ -297,22 +297,27 @@ uint32_t time_us()
     absolute_time_t t = get_absolute_time();
     return to_us_since_boot(t);
 }
+//#define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
     int r, g, b;
+
+    // FH START
+    // uint8_t paletteIndex = bitmap.pal.colorindex[index];
+    // int colorfrompallette = SMSPalette[paletteIndex];
+    // palette565[index] = CC(colorfrompallette);
+    // return;
+    // FH END
+
     // Calculate the correct rgb color values
     // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
-    // So 01 = 01000000 = 40, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
-    // See https://segaretro.org/Palette
-    // r =  bitmap.pal.color[index][0] << 0;
-    // g =  bitmap.pal.color[index][1] << 2;
-    // b =  bitmap.pal.color[index][2] << 4;
-    // // Store the RGB565 value in the palette
-    // int index = r | g | b;
-
+    // So 01 = 01000000 = 64, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
+    // See https://segaretro.org/Palette for more information
+    // 
+   
     switch (bitmap.pal.color[index][0])
     {
-    case 40:
+    case 64:       
         r = 85;
         break;
     case 128:
@@ -321,12 +326,17 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         r = 255;
         break;
-    default:
+    case 0:
         r = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][0]);
+        r = 0;
+        break;
     }
     switch (bitmap.pal.color[index][1])
     {
-    case 40:
+    case 64:
         g = 85;
         break;
     case 128:
@@ -335,12 +345,17 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         g = 255;
         break;
-    default:
+    case 0:
         g = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][1]);
+        g = 0;
+        break;
     }
     switch (bitmap.pal.color[index][2])
     {
-    case 40:
+    case 64:
         b = 85;
         break;
     case 128:
@@ -349,12 +364,23 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         b = 255;
         break;
-    default:
+    case 0:
         b = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][2]);
+        b = 0;
+        break;
     }
 
-    // Store the RGB565 value in the palette
+    // MAKE_PIXEL and expression below are equivalent
+    // uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    // printf("palette[%d] = %x:%x\n", index, rgb565, MAKE_PIXEL(r, g, b));
+    
+    // store the color in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
+  
+    
 }
 #define SCANLINEOFFSET 25
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)

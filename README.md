@@ -16,18 +16,18 @@ Click on image below to see a demo video.
 
 ## Work in progress
 
-This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be. The emulator is also not very fast, and some games may not run at full speed or att all.
+This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors don't feel right and the emulator is also not very fast, and some games may not run at full speed or att all. (afterburner)
 
 Things to do (if possible):
 
-- [ ] Improve video rendering
+- [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.
 - [x] Implement audio (but needs improvement)
 - [ ] Improve performance
 - [x] USB Controller support
 - [ ] Nes controller support
 - [ ] WII-controller support
-- [ ] SD card support.
-- [ ] Menu to select and play ROMs from the SD card.
+- [X] SD card support.
+- [X] Menu to select and play ROMs from the SD card.
 - [ ] Save states
 - [ ] Game Gear support
 
