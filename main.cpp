@@ -64,7 +64,6 @@ static uint32_t fps = 0;
 
 bool reset = false;
 
-
 // const int __not_in_flash_func(SMSPalette)[64] = {
 //     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
 //     0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
@@ -297,7 +296,7 @@ uint32_t time_us()
     absolute_time_t t = get_absolute_time();
     return to_us_since_boot(t);
 }
-//#define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
+// #define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
     int r, g, b;
@@ -313,11 +312,11 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
     // So 01 = 01000000 = 64, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
     // See https://segaretro.org/Palette for more information
-    // 
-   
+    //
+
     switch (bitmap.pal.color[index][0])
     {
-    case 64:       
+    case 64:
         r = 85;
         break;
     case 128:
@@ -376,11 +375,9 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     // MAKE_PIXEL and expression below are equivalent
     // uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
     // printf("palette[%d] = %x:%x\n", index, rgb565, MAKE_PIXEL(r, g, b));
-    
+
     // store the color in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
-  
-    
 }
 #define SCANLINEOFFSET 25
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
@@ -642,47 +639,49 @@ int main()
     // usb initialise
     printf("USB Initialising\n");
     tusb_init();
-    isFatalError = !initSDCard();
-    // Load info about current game and determine file size.
-    printf("Reading current game from %s (if exists).\n", ROMINFOFILE);
-    fr = f_open(&fil, ROMINFOFILE, FA_READ);
-    if (fr == FR_OK)
+    if ((isFatalError = !initSDCard()) == false)
     {
-        size_t r;
-        fr = f_read(&fil, selectedRom, sizeof(selectedRom), &r);
+        // Load info about current game and determine file size.
+        printf("Reading current game from %s (if exists).\n", ROMINFOFILE);
+        fr = f_open(&fil, ROMINFOFILE, FA_READ);
+        if (fr == FR_OK)
+        {
+            size_t r;
+            fr = f_read(&fil, selectedRom, sizeof(selectedRom), &r);
 
-        if (fr != FR_OK)
-        {
-            snprintf(ErrorMessage, 40, "Cannot read %s:%d\n", ROMINFOFILE, fr);
-            selectedRom[0] = 0;
-            printf(ErrorMessage);
-        }
-        else
-        {
-            // determine file size
-            selectedRom[r] = 0;
-            printf("Determine filesize of %s\n", selectedRom);
-            fr2 = f_open(&fil2, selectedRom, FA_READ);
-            if (fr2 == FR_OK)
+            if (fr != FR_OK)
             {
-                fileSize = (int)f_size(&fil2);
-                printf("File size: %d Bytes (0x%x)\n", fileSize, fileSize);
+                snprintf(ErrorMessage, 40, "Cannot read %s:%d\n", ROMINFOFILE, fr);
+                selectedRom[0] = 0;
+                printf(ErrorMessage);
             }
             else
             {
-                snprintf(ErrorMessage, 40, "Cannot open rom %d", fr2);
-                printf("%s\n", ErrorMessage);
-                selectedRom[0] = 0;
+                // determine file size
+                selectedRom[r] = 0;
+                printf("Determine filesize of %s\n", selectedRom);
+                fr2 = f_open(&fil2, selectedRom, FA_READ);
+                if (fr2 == FR_OK)
+                {
+                    fileSize = (int)f_size(&fil2);
+                    printf("File size: %d Bytes (0x%x)\n", fileSize, fileSize);
+                }
+                else
+                {
+                    snprintf(ErrorMessage, 40, "Cannot open rom %d", fr2);
+                    printf("%s\n", ErrorMessage);
+                    selectedRom[0] = 0;
+                }
+                f_close(&fil2);
             }
-            f_close(&fil2);
         }
+        else
+        {
+            snprintf(ErrorMessage, 40, "Cannot open %s:%d\n", ROMINFOFILE, fr);
+            printf(ErrorMessage);
+        }
+        f_close(&fil);
     }
-    else
-    {
-        snprintf(ErrorMessage, 40, "Cannot open %s:%d\n", ROMINFOFILE, fr);
-        printf(ErrorMessage);
-    }
-    f_close(&fil);
     // When a game is started from the menu, the menu will reboot the device.
     // After reboot the emulator will start the selected game.
     if (watchdog_caused_reboot() && isFatalError == false && selectedRom[0] != 0)
