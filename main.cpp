@@ -502,6 +502,11 @@ int ProcessAfterFrameIsRendered()
 
 static DWORD prevButtons[2]{};
 static DWORD prevButtonssystem[2]{};
+static DWORD prevOtherButtons[2]{};
+
+#define OTHER_BUTTON1 (0b1)
+#define OTHER_BUTTON2 (0b10)
+
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed)
@@ -509,7 +514,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
     int smssystem[2]{};
-    unsigned long pushed, pushedsystem;
+    unsigned long pushed, pushedsystem, pushedother;
     for (int i = 0; i < 2; i++)
     {
 
@@ -521,6 +526,8 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                          (gp.buttons & io::GamePadState::Button::DOWN ? INPUT_DOWN : 0) |
                          (gp.buttons & io::GamePadState::Button::A ? INPUT_BUTTON1 : 0) |
                          (gp.buttons & io::GamePadState::Button::B ? INPUT_BUTTON2 : 0) | 0;
+        int otherButtons = (gp.buttons & io::GamePadState::Button::X ? OTHER_BUTTON1 : 0) |
+                           (gp.buttons & io::GamePadState::Button::Y ? OTHER_BUTTON2 : 0) | 0;
         // if ( gp.buttons & io::GamePadState::Button::LEFT  ) printf("LEFT\n");
         // if ( gp.buttons & io::GamePadState::Button::RIGHT ) printf("RIGHT\n");
         // if ( gp.buttons & io::GamePadState::Button::UP  ) printf("UP\n");
@@ -547,11 +554,13 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             pushed = smsbuttons & ~prevButtons[i];
             pushedsystem = smssystem[i] & ~prevButtonssystem[i];
+            pushedother = otherButtons & ~prevOtherButtons[i];
         }
         else
         {
             pushed = smsbuttons;
             pushedsystem = smssystem[i];
+            pushedother = otherButtons;
         }
         if (p1 & INPUT_PAUSE)
         {
@@ -580,10 +589,22 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         }
         prevButtons[i] = smsbuttons;
         prevButtonssystem[i] = smssystem[i];
+        prevOtherButtons[i] = otherButtons;
         // return only on first push
         if (pushed)
         {
             dst = smsbuttons;
+        }
+        if ( pushedother )
+        {
+            if (pushedother & OTHER_BUTTON1)
+            {
+                printf("Other 1\n");
+            }
+            if (pushedother & OTHER_BUTTON2)
+            {
+                printf("Other 2\n");
+            }
         }
     }
     input.system = *pdwSystem = smssystem[0] | smssystem[1];
