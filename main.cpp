@@ -38,10 +38,6 @@
 
 #endif
 
-#if LED_DISABLED == 0
-const uint LED_PIN = LED_GPIO_PIN;
-#endif
-
 #ifndef DVICONFIG
 // #define DVICONFIG dviConfig_PicoDVI
 // #define DVICONFIG dviConfig_PicoDVISock
@@ -112,7 +108,13 @@ namespace
         .pinClock = 16,
         .invert = true,
     };
-
+      // Waveshare RP2040-PiZero DVI
+    constexpr dvi::Config dviConfig_WaveShareRp2040 = {
+        .pinTMDS = {26, 24, 22},
+        .pinClock = 28,
+        .invert = false,
+    };
+    
     enum class ScreenMode
     {
         SCANLINE_8_7,
@@ -482,8 +484,8 @@ int ProcessAfterFrameIsRendered()
     // nespad_read_start();
     auto count = dvi_->getFrameCounter();
     auto onOff = hw_divider_s32_quotient_inlined(count, 60) & 1;
-#if LED_DISABLED == 0
-    gpio_put(LED_PIN, onOff);
+#if LED_GPIO_PIN != -1
+    gpio_put(LED_GPIO_PIN, onOff);
 #endif
     // nespad_read_finish(); // Sets global nespad_state var
     tuh_task();
@@ -630,10 +632,10 @@ int main()
     sleep_ms(500);
     printf("Starting Master System Emulator\n");
 
-#if LED_DISABLED == 0
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_put(LED_PIN, 1);
+#if LED_GPIO_PIN != -1
+    gpio_init(LED_GPIO_PIN);
+    gpio_set_dir(LED_GPIO_PIN, GPIO_OUT);
+    gpio_put(LED_GPIO_PIN, 1);
 #endif
 
     // usb initialise

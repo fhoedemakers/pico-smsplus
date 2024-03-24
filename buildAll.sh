@@ -25,6 +25,11 @@ cd `dirname $0` || exit 1
 if [ -f build/picosmsPlus.uf2 ] ; then
 	cp build/picosmsPlus.uf2 releases/picosmsPlusFeatherDVI.uf2 || exit 1
 fi
+cd `dirname $0` || exit 1
+./build_ws_rp2040_pizero.sh
+if [ -f build/picosmsPlus.uf2 ] ; then
+	cp build/picosmsPlus.uf2 releases/picosmsPlusWsRP2040PiZero.uf2 || exit 1
+fi
 ls -l releases
 #unset RETAINSDK
 #. ./removetmpsdk.sh

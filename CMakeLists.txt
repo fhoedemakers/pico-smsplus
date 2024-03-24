@@ -24,7 +24,7 @@ if ( SMSPLUS_HW_CONFIG EQUAL 1 )
 	# This default Config is for Pimoroni Pico DV Demo Base
 	set(DVICONFIG "dviConfig_PimoroniDemoDVSock" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
-        set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
+    set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
 	set(SD_CS "22" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
 	set(SD_SCK "5" CACHE STRING "Specify de Clock GPIO pin for the SD card")
 	set(SD_MOSI "18" CACHE STRING "Select the Master Out Slave In GPIO pin for the SD card")
@@ -41,7 +41,7 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 2 )
 	# Adafruit DVI Breakout For HDMI Source Devices https://www.adafruit.com/product/4984
 	set(DVICONFIG "dviConfig_PicoDVISock" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
-        set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
+    set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
 	# Adafruit Micro-SD breakout board+ https://www.adafruit.com/product/254 
 	set(SD_CS "5" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
 	set(SD_SCK "2" CACHE STRING "Specify de Clock GPIO pin for the SD card")
@@ -58,7 +58,7 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 3 )
 	# --------------------------------------------------------------------
 	set(DVICONFIG "dviConfig_AdafruitFeatherDVI" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
-        set(LED_GPIO_PIN "13" CACHE STRING "Select the GPIO pin for LED")
+    set(LED_GPIO_PIN "13" CACHE STRING "Select the GPIO pin for LED")
 	set(SD_CS "10" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
 	set(SD_SCK "14" CACHE STRING "Specify de Clock GPIO pin for the SD card")
 	set(SD_MOSI "15" CACHE STRING "Select the Master Out Slave In GPIO pin for the SD card")
@@ -68,6 +68,22 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 3 )
 	set(NES_LAT "9" CACHE STRING "Select the Latch GPIO pin for NES controller")
 	set(WII_SDA "2" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
 	set(WII_SCL "3" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
+    elseif ( INFONES_PLUS_HW_CONFIG EQUAL 4 )
+    # --------------------------------------------------------------------
+	# Alternate config for use with Waveshare RP2040-PiZero
+	# --------------------------------------------------------------------
+	set(DVICONFIG "dviConfig_WaveShareRp2040" CACHE STRING
+    "Select a default pin configuration from common_dvi_pin_configs.h")
+    set(LED_GPIO_PIN "-1" CACHE STRING "Select the GPIO pin for LED")
+    set(SD_CS "21" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
+    set(SD_SCK "18" CACHE STRING "Specify de Clock GPIO pin for the SD card")
+    set(SD_MOSI "19" CACHE STRING "Select the Master Out Slave In GPIO pin for the SD card")
+    set(SD_MISO "20" CACHE STRING "Select the Master In Slave Out GPIO pin for the SD card")
+    set(NES_CLK "5" CACHE STRING "Select the Clock GPIO pin for NES controller")
+    set(NES_DATA "6" CACHE STRING "Select the Data GPIO pin for NES controller")
+    set(NES_LAT "9" CACHE STRING "Select the Latch GPIO pin for NES controller")
+    set(WII_SDA "-1" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
+    set(WII_SCL "-1" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
 endif ( )
 
 # --------------------------------------------------------------------
@@ -83,12 +99,6 @@ message("Wii controller SDA  : ${WII_SDA}")
 message("Wii controller SCL  : ${WII_SCL}")
 message("LED pin             : ${LED_GPIO_PIN}")
 
-if (  INFONES_PLUS_DISABLE_LED ) 
-    set(LED_DISABLED 1 CACHE STRING "Select whether to disable or enable the on board LED")
-else() 
-    set(LED_DISABLED 0 CACHE STRING "Select whether to disable or enable the on board LED")
-endif (  INFONES_PLUS_DISABLE_LED )
-message("LED disabled        : ${LED_DISABLED}") 
 add_executable(${projectname}
     main.cpp
     hid_app.cpp
@@ -128,8 +138,7 @@ target_compile_definitions(${projectname} PUBLIC
     NES_PIN_LAT=${NES_LAT}
     WII_PIN_SDA=${WII_SDA}
     WII_PIN_SCL=${WII_SCL}
-    LED_GPIO_PIN=${LED_GPIO_PIN}
-    LED_DISABLED=${LED_DISABLED})
+    LED_GPIO_PIN=${LED_GPIO_PIN})
     
 target_link_libraries(${projectname}
 PRIVATE
