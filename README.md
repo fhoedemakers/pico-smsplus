@@ -68,7 +68,7 @@ The _debug.sh scripts can be use to create a debug build for each system.
 
 ## Things to do (if possible):
 
-- [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.
+- [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.  ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4))
 - [x] Implement audio (but needs improvement)
 - [ ] Improve performance
 - [x] USB Controller support
