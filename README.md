@@ -28,19 +28,6 @@ Click on image below to see a demo video.
 
 [![Video](https://img.youtube.com/vi/__E8h2Ay3g8/0.jpg)](https://www.youtube.com/watch?v=__E8h2Ay3g8)
 
-Things to do (if possible):
-
-- [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.
-- [x] Implement audio (but needs improvement)
-- [ ] Improve performance
-- [x] USB Controller support
-- [X] Nes controller support
-- [X] WII-controller support
-- [X] SD card support.
-- [X] Menu to select and play ROMs from the SD card.
-- [ ] Save states
-- [ ] Game Gear support
-
 
 ## Supported USB controller
 The following controllers are supported.
@@ -79,3 +66,15 @@ Build shell scripts are available:
 
 The _debug.sh scripts can be use to create a debug build for each system.
 
+## Things to do (if possible):
+
+- [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.
+- [x] Implement audio (but needs improvement)
+- [ ] Improve performance
+- [x] USB Controller support
+- [X] Nes controller support
+- [X] WII-controller support
+- [X] SD card support.
+- [X] Menu to select and play ROMs from the SD card.
+- [ ] Save states
+- [ ] Game Gear support
