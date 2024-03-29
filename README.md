@@ -41,8 +41,6 @@ Things to do (if possible):
 - [ ] Save states
 - [ ] Game Gear support
 
-## Building
-I use Visual Studio Code on a Raspberry PI 400. Make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.
 
 ## Supported USB controller
 The following controllers are supported.
