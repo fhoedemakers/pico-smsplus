@@ -1,6 +1,6 @@
 # Work in progress
 
-**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors are not displayed correctly (issue #4) and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
+**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors are not displayed correctly ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4)) and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
 
 # pico-smsplus
 
