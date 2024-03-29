@@ -65,7 +65,7 @@ struct charCell
 };
 
 #define SCREENBUFCELLS SCREEN_ROWS *SCREEN_COLS
-static charCell screenBuffer[SCREENBUFCELLS];
+static charCell *screenBuffer;
 ;
 
 static WORD *WorkLineRom = nullptr;
@@ -377,6 +377,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
 
     int horzontalScrollIndex = 0;
     printf("Starting Menu\n");
+    screenBuffer = (charCell *)malloc(SCREENBUFCELLS * sizeof(charCell));
     size_t ramsize;
     // Borrow Emulator RAM buffer for screen.
     // screenBuffer = (charCell *)InfoNes_GetRAM(&ramsize);
