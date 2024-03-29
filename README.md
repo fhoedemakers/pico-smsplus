@@ -51,6 +51,8 @@ The following controllers are supported.
 - SONY DUALSHOCK 4
 - SONY DualSense
 
+Also original NES and WII-classic controllers are supported in some configurations. See the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus) for more info.
+
 ## Menu Usage
 Gamepad buttons:
 - UP/DOWN: Next/previous item in the menu.
