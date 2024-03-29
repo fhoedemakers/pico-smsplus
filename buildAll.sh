@@ -13,7 +13,7 @@ cd `dirname $0` || exit 1
 #. ./checksdk.sh
 ./build.sh
 if [ -f build/picosmsPlus.uf2 ] ; then
-	cp build/picosmsPlus.uf2 releases/picosmsPlusimoroniDV.uf2 || exit 1
+	cp build/picosmsPlus.uf2 releases/picosmsPlusPimoroniDV.uf2 || exit 1
 fi
 cd `dirname $0` || exit 1
 ./build_alternate.sh
