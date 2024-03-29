@@ -741,7 +741,7 @@ int main()
         {
             printf("Start not pressed, flashing rom.\n ");
             // Allocate 4k buffer. This is the smallest amount that can be flashed at once.
-            size_t bufsize = 0x2000;
+            size_t bufsize = 0x1000;  
             BYTE *buffer = (BYTE *)malloc(bufsize);
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
             printf("write %s rom to flash %x\n", selectedRom, ofs);
