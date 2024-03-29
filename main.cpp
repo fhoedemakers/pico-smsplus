@@ -30,8 +30,8 @@
 #include "mytypes.h"
 #include "gamepad.h"
 #include "menu.h"
-// #include "nespad.h"
-// #include "wiipad.h"
+#include "nespad.h"
+#include "wiipad.h"
 #ifdef __cplusplus
 
 #include "ff.h"
@@ -108,13 +108,13 @@ namespace
         .pinClock = 16,
         .invert = true,
     };
-      // Waveshare RP2040-PiZero DVI
+    // Waveshare RP2040-PiZero DVI
     constexpr dvi::Config dviConfig_WaveShareRp2040 = {
         .pinTMDS = {26, 24, 22},
         .pinClock = 28,
         .invert = false,
     };
-    
+
     enum class ScreenMode
     {
         SCANLINE_8_7,
@@ -311,8 +311,8 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     // FH END
 
     // Calculate the correct rgb color values
-    // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
-    // So 01 = 01000000 = 64, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
+    // The R, G and B values are binary 0b01 0b10 0b11 0b00 shifted 6 bits to the left
+    // So 0b01 = 0b01000000 = 64, 0b10 = 10000000 = 128, 0b11 = 11000000 = 192, 0b00 = 00000000 = 0
     // See https://segaretro.org/Palette for more information
     //
 
@@ -480,12 +480,16 @@ void in_ram(core1_main)()
 }
 int ProcessAfterFrameIsRendered()
 {
-    // disabled for now
-    // nespad_read_start();
+#if NES_PIN_CLK != -1
+    nespad_read_start();
+#endif
     auto count = dvi_->getFrameCounter();
     auto onOff = hw_divider_s32_quotient_inlined(count, 60) & 1;
 #if LED_GPIO_PIN != -1
     gpio_put(LED_GPIO_PIN, onOff);
+#endif
+#if NES_PIN_CLK != -1
+    nespad_read_finish(); // Sets global nespad_state var
 #endif
     // nespad_read_finish(); // Sets global nespad_state var
     tuh_task();
@@ -507,17 +511,27 @@ static DWORD prevOtherButtons[2]{};
 #define OTHER_BUTTON1 (0b1)
 #define OTHER_BUTTON2 (0b10)
 
+#define NESPAD_SELECT (0x04)
+#define NESPAD_START (0x08)
+#define NESPAD_UP (0x10)
+#define NESPAD_DOWN (0x20)
+#define NESPAD_LEFT (0x40)
+#define NESPAD_RIGHT (0x80)
+#define NESPAD_A (0x01)
+#define NESPAD_B (0x02)
+
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed)
 {
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
+
     int smssystem[2]{};
     unsigned long pushed, pushedsystem, pushedother;
     for (int i = 0; i < 2; i++)
     {
-
+        int nespadbuttons = 0;
         auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
         int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
@@ -528,24 +542,31 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                          (gp.buttons & io::GamePadState::Button::B ? INPUT_BUTTON2 : 0) | 0;
         int otherButtons = (gp.buttons & io::GamePadState::Button::X ? OTHER_BUTTON1 : 0) |
                            (gp.buttons & io::GamePadState::Button::Y ? OTHER_BUTTON2 : 0) | 0;
-        // if ( gp.buttons & io::GamePadState::Button::LEFT  ) printf("LEFT\n");
-        // if ( gp.buttons & io::GamePadState::Button::RIGHT ) printf("RIGHT\n");
-        // if ( gp.buttons & io::GamePadState::Button::UP  ) printf("UP\n");
-        // if ( gp.buttons & io::GamePadState::Button::DOWN ) printf("DOWN\n");
-        // if ( gp.buttons & io::GamePadState::Button::A ) printf("A\n");
-        // if ( gp.buttons & io::GamePadState::Button::B ) printf("B\n");
-        // Disable for now, also keep in mind that select and start must go to smssystem
-        //         if (i == 0)
-        //         {
-        //             v |= nespad_state;
-        // #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
-        //             v |= wiipad_read();
-        // #endif
-        //        }
         smssystem[i] =
             (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
             (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
             0;
+        if (i == 0)
+        {
+#if NES_PIN_CLK != -1
+            nespadbuttons = nespad_state;
+#endif
+
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+            nespadbuttons |= wiipad_read();
+#endif
+            if (nespadbuttons > 0)
+            {
+                smsbuttons |= ((nespadbuttons & NESPAD_UP ? INPUT_UP : 0) |
+                               (nespadbuttons & NESPAD_DOWN ? INPUT_DOWN : 0) |
+                               (nespadbuttons & NESPAD_LEFT ? INPUT_LEFT : 0) |
+                               (nespadbuttons & NESPAD_RIGHT ? INPUT_RIGHT : 0) |
+                               (nespadbuttons & NESPAD_A ? INPUT_BUTTON1 : 0) |
+                               (nespadbuttons & NESPAD_B ? INPUT_BUTTON2 : 0) | 0);
+                smssystem[i] |= ((nespadbuttons & NESPAD_SELECT ? INPUT_PAUSE : 0) |
+                                 (nespadbuttons & NESPAD_START ? INPUT_START : 0) | 0);
+            }
+        }
         // if (gp.buttons & io::GamePadState::Button::SELECT) printf("SELECT\n");
         // if (gp.buttons & io::GamePadState::Button::START) printf("START\n");
         input.pad[i] = smsbuttons;
@@ -595,7 +616,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             dst = smsbuttons;
         }
-        if ( pushedother )
+        if (pushedother)
         {
             if (pushedother & OTHER_BUTTON1)
             {
@@ -818,7 +839,12 @@ int main()
     // dvi_->setScanLine(true);
 
     applyScreenMode();
-
+#if NES_PIN_CLK != -1
+    nespad_begin(CPUFreqKHz, NES_PIN_CLK, NES_PIN_DATA, NES_PIN_LAT);
+#endif
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+    wiipad_begin();
+#endif
     // 空サンプル詰めとく
     dvi_->getAudioRingBuffer().advanceWritePointer(255);
 

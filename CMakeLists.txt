@@ -68,7 +68,7 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 3 )
 	set(NES_LAT "9" CACHE STRING "Select the Latch GPIO pin for NES controller")
 	set(WII_SDA "2" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
 	set(WII_SCL "3" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
-    elseif ( INFONES_PLUS_HW_CONFIG EQUAL 4 )
+elseif ( SMSPLUS_HW_CONFIG EQUAL 4 )
     # --------------------------------------------------------------------
 	# Alternate config for use with Waveshare RP2040-PiZero
 	# --------------------------------------------------------------------
@@ -103,6 +103,8 @@ add_executable(${projectname}
     main.cpp
     hid_app.cpp
     gamepad.cpp
+    nespad.cpp
+    wiipad.cpp
     menu.cpp 
     RomLister.cpp
     FrensHelpers.cpp

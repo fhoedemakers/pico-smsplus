@@ -12,7 +12,7 @@ if [ -d build ] ; then
 fi
 mkdir build || exit 1
 cd build || exit 1
-cmake -DCMAKE_BUILD_TYPE=DEBUG -DINFONES_PLUS_HW_CONFIG=4 ..
+cmake -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DSMSPLUS_HW_CONFIG=4 ..
 make -j 4
 cd ..
 # . ./removetmpsdk.sh

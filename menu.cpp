@@ -631,10 +631,10 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     } // while 1
       // Wait until user has released all buttons
     clearinput();
-    // voorlopig uitgeschakeld
-    // #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
-    //     wiipad_end();
-    // #endif
+    
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+    wiipad_end();
+#endif
 
     // Don't return from this function call, but reboot in order to get avoid several problems with sound and lockups (WII-pad)
     // After reboot the emulator will and flash start the selected game.
