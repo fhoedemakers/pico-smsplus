@@ -27,6 +27,7 @@ Click on image below to see a demo video.
 ## Work in progress
 
 **This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors don't feel right and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
+
 Things to do (if possible):
 
 - [ ] Improve colors. Colors don't feel right. Maybe it is flawed in the emulator.
