@@ -14,6 +14,7 @@
 #include "hardware/timer.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
+#include "hardware/watchdog.h"
 #include <hardware/sync.h>
 #include <pico/multicore.h>
 #include <hardware/flash.h>
@@ -28,12 +29,14 @@
 #include "shared.h"
 #include "mytypes.h"
 #include "gamepad.h"
+#include "menu.h"
+#include "nespad.h"
+#include "wiipad.h"
 #ifdef __cplusplus
 
 #include "ff.h"
 
 #endif
-const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
 #ifndef DVICONFIG
 // #define DVICONFIG dviConfig_PicoDVI
@@ -44,6 +47,8 @@ const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 #define ERRORMESSAGESIZE 40
 #define GAMESAVEDIR "/SAVES"
 util::ExclusiveProc exclProc_;
+std::unique_ptr<dvi::DVI> dvi_;
+
 char *ErrorMessage;
 bool isFatalError = false;
 static FATFS fs;
@@ -52,6 +57,29 @@ char *romName;
 static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
+
+bool reset = false;
+
+// const int __not_in_flash_func(SMSPalette)[64] = {
+//     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
+//     0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
+//     0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00AA55, 0x55AA55, 0xAAAA55, 0xFFAA55,
+//     0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00, 0x00FF55, 0x55FF55, 0xAAFF55, 0xFFFF55,
+//     0x0000AA, 0x5500AA, 0xAA00AA, 0xFF00AA, 0x0000FF, 0x5500FF, 0xAA00FF, 0xFF00FF,
+//     0x0055AA, 0x5555AA, 0xAA55AA, 0xFF55AA, 0x00FF55, 0x5555FF, 0xAA55FF, 0xFF55FF,
+//     0x00AAAA, 0x55AAAA, 0xAAAAAA, 0xFFAAAA, 0x00AAFF, 0x55AAFF, 0xAAAAFF, 0xFFAAFF,
+//     0x00FFAA, 0x55FFAA, 0xAAFFAA, 0xFFFFAA, 0x00FFFF, 0x55FFFF, 0xAAFFFF, 0xFFFFFF};
+
+// https://en.wikipedia.org/wiki/List_of_video_game_console_palettes
+// const int __not_in_flash_func(SMSPalette)[64] = {
+//     0x000000, 0x000055, 0x0000AA, 0x0000FF, 0x550000, 0x550055, 0x5500AA, 0x5500FF,
+//     0xAA0000, 0xAA0055, 0xAA00AA, 0xAA00FF, 0xFF0000, 0xFF0055, 0xFF00AA, 0xFF00FF,
+//     0x005500, 0x005555, 0x0055AA, 0x0055FF, 0x555500, 0x555555, 0x5555AA, 0x5555FF,
+//     0xAA5500, 0xAA5555, 0xAA55AA, 0xAA55FF, 0xFF5500, 0xFF5555, 0xFF55AA, 0xFF55FF,
+//     0x00AA00, 0x00AA55, 0x00AAAA, 0x00AAFF, 0x55AA00, 0x55AA55, 0x55AAAA, 0x55AAFF,
+//     0xAAAA00, 0xAAAA555, 0xAAAAAA, 0xAAAAFF, 0xFFAA00, 0xFFAA55, 0xFFAAAA, 0xFFAAFF,
+//     0x00FF00, 0x00FF55, 0x00FFAA, 0x00FFFF, 0x55FF00, 0x55FF55, 0x55FFAA, 0x55FFFF,
+//     0xAAFF00, 0xAAFF55, 0xAAFFAA, 0xAAFFFF, 0xFFFF00, 0xFFFF55, 0xFFFFAA, 0xFFFFFF};
 
 namespace
 {
@@ -80,8 +108,12 @@ namespace
         .pinClock = 16,
         .invert = true,
     };
-
-    std::unique_ptr<dvi::DVI> dvi_;
+    // Waveshare RP2040-PiZero DVI
+    constexpr dvi::Config dviConfig_WaveShareRp2040 = {
+        .pinTMDS = {26, 24, 22},
+        .pinClock = 28,
+        .invert = false,
+    };
 
     enum class ScreenMode
     {
@@ -98,7 +130,7 @@ namespace
     void applyScreenMode()
     {
         bool scanLine = false;
-
+        printf("Screen mode: %d\n", static_cast<int>(screenMode_));
         switch (screenMode_)
         {
         case ScreenMode::SCANLINE_1_1:
@@ -170,6 +202,57 @@ void __not_in_flash_func(drawWorkMeter)(int line)
     util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
 }
 
+bool initSDCard()
+{
+    FRESULT fr;
+    TCHAR str[40];
+    sleep_ms(1000);
+
+    printf("Mounting SDcard");
+    fr = f_mount(&fs, "", 1);
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "SD card mount error: %d", fr);
+        printf("\n%s\n", ErrorMessage);
+        return false;
+    }
+    printf("\n");
+
+    fr = f_chdir("/");
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot change dir to / : %d", fr);
+        printf("\n%s\n", ErrorMessage);
+        return false;
+    }
+    // for f_getcwd to work, set
+    //   #define FF_FS_RPATH		2
+    // in drivers/fatfs/ffconf.h
+    fr = f_getcwd(str, sizeof(str));
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot get current dir: %d", fr);
+        printf("\n%s\n", ErrorMessage);
+        return false;
+    }
+    printf("Current directory: %s\n", str);
+    printf("Creating directory %s\n", GAMESAVEDIR);
+    fr = f_mkdir(GAMESAVEDIR);
+    if (fr != FR_OK)
+    {
+        if (fr == FR_EXIST)
+        {
+            printf("Directory already exists.\n");
+        }
+        else
+        {
+            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot create dir %s: %d", GAMESAVEDIR, fr);
+            printf("%s\n", ErrorMessage);
+            return false;
+        }
+    }
+    return true;
+}
 int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
@@ -210,17 +293,32 @@ void in_ram(processaudio)(int offset)
         samples -= n;
     }
 }
-
+uint32_t time_us()
+{
+    absolute_time_t t = get_absolute_time();
+    return to_us_since_boot(t);
+}
+// #define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
     int r, g, b;
+
+    // FH START
+    // uint8_t paletteIndex = bitmap.pal.colorindex[index];
+    // int colorfrompallette = SMSPalette[paletteIndex];
+    // palette565[index] = CC(colorfrompallette);
+    // return;
+    // FH END
+
     // Calculate the correct rgb color values
-    // The R, G and B values are binary 01 10 11 00 shifted 6 bits to the left
-    // So 01 = 01000000 = 40, 10 = 10000000 = 128, 11 = 11000000 = 192, 00 = 00000000 = 0
-    // See https://segaretro.org/Palette
+    // The R, G and B values are binary 0b01 0b10 0b11 0b00 shifted 6 bits to the left
+    // So 0b01 = 0b01000000 = 64, 0b10 = 10000000 = 128, 0b11 = 11000000 = 192, 0b00 = 00000000 = 0
+    // See https://segaretro.org/Palette for more information
+    //
+
     switch (bitmap.pal.color[index][0])
     {
-    case 40:
+    case 64:
         r = 85;
         break;
     case 128:
@@ -229,12 +327,17 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         r = 255;
         break;
-    default:
+    case 0:
         r = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][0]);
+        r = 0;
+        break;
     }
     switch (bitmap.pal.color[index][1])
     {
-    case 40:
+    case 64:
         g = 85;
         break;
     case 128:
@@ -243,12 +346,17 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         g = 255;
         break;
-    default:
+    case 0:
         g = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][1]);
+        g = 0;
+        break;
     }
     switch (bitmap.pal.color[index][2])
     {
-    case 40:
+    case 64:
         b = 85;
         break;
     case 128:
@@ -257,10 +365,20 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     case 192:
         b = 255;
         break;
-    default:
+    case 0:
         b = 0;
+        break;
+    default:
+        printf("Unknown color %d\n", bitmap.pal.color[index][2]);
+        b = 0;
+        break;
     }
-    // Store the RGB565 value in the palette
+
+    // MAKE_PIXEL and expression below are equivalent
+    // uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    // printf("palette[%d] = %x:%x\n", index, rgb565, MAKE_PIXEL(r, g, b));
+
+    // store the color in the palette
     palette565[index] = MAKE_PIXEL(r, g, b);
 }
 #define SCANLINEOFFSET 25
@@ -360,16 +478,61 @@ void in_ram(core1_main)()
         exclProc_.processOrWaitIfExist();
     }
 }
+int ProcessAfterFrameIsRendered()
+{
+#if NES_PIN_CLK != -1
+    nespad_read_start();
+#endif
+    auto count = dvi_->getFrameCounter();
+    auto onOff = hw_divider_s32_quotient_inlined(count, 60) & 1;
+#if LED_GPIO_PIN != -1
+    gpio_put(LED_GPIO_PIN, onOff);
+#endif
+#if NES_PIN_CLK != -1
+    nespad_read_finish(); // Sets global nespad_state var
+#endif
+    // nespad_read_finish(); // Sets global nespad_state var
+    tuh_task();
+    // Frame rate calculation
+    if (fps_enabled)
+    {
+        // calculate fps and round to nearest value (instead of truncating/floor)
+        uint32_t tick_us = time_us() - start_tick_us;
+        fps = (1000000 - 1) / tick_us + 1;
+        start_tick_us = time_us();
+    }
+    return count;
+}
+
 static DWORD prevButtons[2]{};
 static DWORD prevButtonssystem[2]{};
+static DWORD prevOtherButtons[2]{};
+
+#define OTHER_BUTTON1 (0b1)
+#define OTHER_BUTTON2 (0b10)
+
+#define NESPAD_SELECT (0x04)
+#define NESPAD_START (0x08)
+#define NESPAD_UP (0x10)
+#define NESPAD_DOWN (0x20)
+#define NESPAD_LEFT (0x40)
+#define NESPAD_RIGHT (0x80)
+#define NESPAD_A (0x01)
+#define NESPAD_B (0x02)
+
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
-void processinput()
+void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed)
 {
+    // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
+    *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
 
     int smssystem[2]{};
+    unsigned long pushed, pushedsystem, pushedother;
     for (int i = 0; i < 2; i++)
     {
+        int nespadbuttons = 0;
+        auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
         int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
                          (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
@@ -377,18 +540,57 @@ void processinput()
                          (gp.buttons & io::GamePadState::Button::DOWN ? INPUT_DOWN : 0) |
                          (gp.buttons & io::GamePadState::Button::A ? INPUT_BUTTON1 : 0) |
                          (gp.buttons & io::GamePadState::Button::B ? INPUT_BUTTON2 : 0) | 0;
-
+        int otherButtons = (gp.buttons & io::GamePadState::Button::X ? OTHER_BUTTON1 : 0) |
+                           (gp.buttons & io::GamePadState::Button::Y ? OTHER_BUTTON2 : 0) | 0;
         smssystem[i] =
             (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
             (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
             0;
+        if (i == 0)
+        {
+#if NES_PIN_CLK != -1
+            nespadbuttons = nespad_state;
+#endif
 
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+            nespadbuttons |= wiipad_read();
+#endif
+            if (nespadbuttons > 0)
+            {
+                smsbuttons |= ((nespadbuttons & NESPAD_UP ? INPUT_UP : 0) |
+                               (nespadbuttons & NESPAD_DOWN ? INPUT_DOWN : 0) |
+                               (nespadbuttons & NESPAD_LEFT ? INPUT_LEFT : 0) |
+                               (nespadbuttons & NESPAD_RIGHT ? INPUT_RIGHT : 0) |
+                               (nespadbuttons & NESPAD_A ? INPUT_BUTTON1 : 0) |
+                               (nespadbuttons & NESPAD_B ? INPUT_BUTTON2 : 0) | 0);
+                smssystem[i] |= ((nespadbuttons & NESPAD_SELECT ? INPUT_PAUSE : 0) |
+                                 (nespadbuttons & NESPAD_START ? INPUT_START : 0) | 0);
+            }
+        }
+        // if (gp.buttons & io::GamePadState::Button::SELECT) printf("SELECT\n");
+        // if (gp.buttons & io::GamePadState::Button::START) printf("START\n");
         input.pad[i] = smsbuttons;
         auto p1 = smssystem[i];
-
-        auto pushed = smsbuttons & ~prevButtons[i];
-        auto pushedsystem = smssystem[i] & ~prevButtonssystem[i];
-
+        if (ignorepushed == false)
+        {
+            pushed = smsbuttons & ~prevButtons[i];
+            pushedsystem = smssystem[i] & ~prevButtonssystem[i];
+            pushedother = otherButtons & ~prevOtherButtons[i];
+        }
+        else
+        {
+            pushed = smsbuttons;
+            pushedsystem = smssystem[i];
+            pushedother = otherButtons;
+        }
+        if (p1 & INPUT_PAUSE)
+        {
+            if (pushedsystem & INPUT_START)
+            {
+                reset = true;
+                printf("Reset pressed\n");
+            }
+        }
         if (p1 & INPUT_START)
         {
             // Toggle frame rate display
@@ -408,18 +610,40 @@ void processinput()
         }
         prevButtons[i] = smsbuttons;
         prevButtonssystem[i] = smssystem[i];
+        prevOtherButtons[i] = otherButtons;
+        // return only on first push
+        if (pushed)
+        {
+            dst = smsbuttons;
+        }
+        if (pushedother)
+        {
+            if (pushedother & OTHER_BUTTON1)
+            {
+                printf("Other 1\n");
+            }
+            if (pushedother & OTHER_BUTTON2)
+            {
+                printf("Other 2\n");
+            }
+        }
     }
-    input.system = smssystem[0] | smssystem[1];
+    input.system = *pdwSystem = smssystem[0] | smssystem[1];
+    // return only on first push
+    if (pushedsystem)
+    {
+        *pdwSystem = smssystem[0] | smssystem[1];
+    }
 }
 
 void in_ram(process)(void)
 {
-    while (true)
+    DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
+    while (reset == false)
     {
-        processinput();
+        processinput(&pdwPad1, &pdwPad2, &pdwSystem, false);
         sms_frame(0);
-        gpio_put(LED_PIN, hw_divider_s32_quotient_inlined(dvi_->getFrameCounter(), 60) & 1);
-        tuh_task();
+        ProcessAfterFrameIsRendered();
     }
 }
 
@@ -429,25 +653,178 @@ void in_ram(process)(void)
 /// @return
 int main()
 {
+    char selectedRom[128];
+    romName = selectedRom;
+    char errMSG[ERRORMESSAGESIZE];
+    errMSG[0] = selectedRom[0] = 0;
+    int fileSize = 0;
+    FIL fil;
+    FIL fil2;
+    FRESULT fr;
+    FRESULT fr2;
+    size_t tmpSize;
+
+    ErrorMessage = errMSG;
     // Set voltage and clock frequency
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(10);
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    for (int i = 0; i < 2; i++)
-    {
-        printf("Hello, world! The master system emulator is starting...(%d)\n", i);
-        sleep_ms(500);
-    }
+    sleep_ms(500);
     printf("Starting Master System Emulator\n");
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_put(LED_PIN, 1);
+
+#if LED_GPIO_PIN != -1
+    gpio_init(LED_GPIO_PIN);
+    gpio_set_dir(LED_GPIO_PIN, GPIO_OUT);
+    gpio_put(LED_GPIO_PIN, 1);
+#endif
 
     // usb initialise
     printf("USB Initialising\n");
     tusb_init();
+    if ((isFatalError = !initSDCard()) == false)
+    {
+        // Load info about current game and determine file size.
+        printf("Reading current game from %s (if exists).\n", ROMINFOFILE);
+        fr = f_open(&fil, ROMINFOFILE, FA_READ);
+        if (fr == FR_OK)
+        {
+            size_t r;
+            fr = f_read(&fil, selectedRom, sizeof(selectedRom), &r);
+
+            if (fr != FR_OK)
+            {
+                snprintf(ErrorMessage, 40, "Cannot read %s:%d\n", ROMINFOFILE, fr);
+                selectedRom[0] = 0;
+                printf(ErrorMessage);
+            }
+            else
+            {
+                // determine file size
+                selectedRom[r] = 0;
+                printf("Determine filesize of %s\n", selectedRom);
+                fr2 = f_open(&fil2, selectedRom, FA_READ);
+                if (fr2 == FR_OK)
+                {
+                    fileSize = (int)f_size(&fil2);
+                    printf("File size: %d Bytes (0x%x)\n", fileSize, fileSize);
+                }
+                else
+                {
+                    snprintf(ErrorMessage, 40, "Cannot open rom %d", fr2);
+                    printf("%s\n", ErrorMessage);
+                    selectedRom[0] = 0;
+                }
+                f_close(&fil2);
+            }
+        }
+        else
+        {
+            snprintf(ErrorMessage, 40, "Cannot open %s:%d\n", ROMINFOFILE, fr);
+            printf(ErrorMessage);
+        }
+        f_close(&fil);
+    }
+    // When a game is started from the menu, the menu will reboot the device.
+    // After reboot the emulator will start the selected game.
+    if (watchdog_caused_reboot() && isFatalError == false && selectedRom[0] != 0)
+    {
+        // Determine loaded rom
+        printf("Rebooted by menu\n");
+
+        printf("Starting (%d) %s\n", strlen(selectedRom), selectedRom);
+        printf("Checking for /START file. (Is start pressed in Menu?)\n");
+        fr = f_unlink("/START");
+        // 4kb is how many bytes? 0x1000 = 4096
+        if (fr == FR_NO_FILE)
+        {
+            printf("Start not pressed, flashing rom.\n ");
+            // Allocate 4k buffer. This is the smallest amount that can be flashed at once.
+            size_t bufsize = 0x2000;
+            BYTE *buffer = (BYTE *)malloc(bufsize);
+            auto ofs = SMS_FILE_ADDR - XIP_BASE;
+            printf("write %s rom to flash %x\n", selectedRom, ofs);
+            fr = f_open(&fil, selectedRom, FA_READ);
+
+            UINT bytesRead;
+            if (fr == FR_OK)
+            {
+                // filesize already known.
+                if ((fileSize / 512) & 1)
+                {
+                    printf("Skipping header\n");
+                    fr = f_lseek(&fil, 512);
+                    if (fr != FR_OK)
+                    {
+                        snprintf(ErrorMessage, 40, "Error skipping header: %d", fr);
+                        printf("%s\n", ErrorMessage);
+                        selectedRom[0] = 0;
+                    }
+                }
+                if (fr == FR_OK)
+                {
+
+                    for (;;)
+                    {
+                        fr = f_read(&fil, buffer, bufsize, &bytesRead);
+                        if (fr == FR_OK)
+                        {
+                            if (bytesRead == 0)
+                            {
+                                break;
+                            }
+                            printf("Flashing %d bytes to flash address %x\n", bytesRead, ofs);
+                            printf("  -> Erasing...");
+
+                            // Disable interupts, erase, flash and enable interrupts
+                            uint32_t ints = save_and_disable_interrupts();
+                            flash_range_erase(ofs, bufsize);
+                            printf("\n  -> Flashing...");
+                            flash_range_program(ofs, buffer, bufsize);
+                            restore_interrupts(ints);
+                            //
+
+                            printf("\n");
+                            ofs += bufsize;
+                        }
+                        else
+                        {
+                            snprintf(ErrorMessage, 40, "Error reading rom: %d", fr);
+                            printf("Error reading rom: %d\n", fr);
+                            selectedRom[0] = 0;
+                            break;
+                        }
+                    }
+                }
+                f_close(&fil);
+            }
+            else
+            {
+                snprintf(ErrorMessage, 40, "Cannot open rom %d", fr);
+                printf("%s\n", ErrorMessage);
+                selectedRom[0] = 0;
+            }
+            free(buffer);
+        }
+        else
+        {
+            if (fr != FR_OK)
+            {
+                snprintf(ErrorMessage, 40, "Cannot delete /START file %d", fr);
+                printf("%s\n", ErrorMessage);
+                selectedRom[0] = 0;
+            }
+            else
+            {
+                printf("Start pressed in menu, not flashing rom.\n");
+            }
+        }
+    }
+    else
+    {
+        selectedRom[0] = 0;
+    }
     //
     printf("Initialising DVI\n");
     dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
@@ -462,7 +839,12 @@ int main()
     // dvi_->setScanLine(true);
 
     applyScreenMode();
-
+#if NES_PIN_CLK != -1
+    nespad_begin(CPUFreqKHz, NES_PIN_CLK, NES_PIN_DATA, NES_PIN_LAT);
+#endif
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+    wiipad_begin();
+#endif
     // 空サンプル詰めとく
     dvi_->getAudioRingBuffer().advanceWritePointer(255);
 
@@ -472,14 +854,27 @@ int main()
     // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
     // sms.console = CONSOLE_SMS; // For now, we only support SMS
     //
-    printf("Loading ROM\n");
-    load_rom();
-    // Initialize all systems and power on
-    system_init(SMS_AUD_RATE);
-    // load state if any
-    // system_load_state();
-    system_reset();
-    printf("Starting game\n");
-    process();
+
+    while (true)
+    {
+        if (strlen(selectedRom) == 0 || reset == true)
+        {
+            screenMode_ = ScreenMode::NOSCANLINE_8_7;
+            applyScreenMode();
+            menu(SMS_FILE_ADDR, ErrorMessage, isFatalError, reset);
+        }
+        reset = false;
+        printf("Now playing: %s\n", selectedRom);
+        load_rom(fileSize);
+        // Initialize all systems and power on
+        system_init(SMS_AUD_RATE);
+        // load state if any
+        // system_load_state();
+        system_reset();
+        printf("Starting game\n");
+        process();
+        selectedRom[0] = 0;
+    }
+
     return 0;
 }

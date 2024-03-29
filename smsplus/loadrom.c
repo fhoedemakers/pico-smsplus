@@ -95,12 +95,28 @@ typedef struct
 
 //     return 1;
 // }
+int load_rom(int size)
+{
+    uint8_t *start = (uint8_t *)SMS_FILE_ADDR;
+    sms.use_fm = 0;
+    sms.country = TYPE_OVERSEAS;
+    sms.sram = sram;
+    sms.dummy = smsBufferLine;
+    bitmap.data = smsBufferLine;
+    bitmap.width = BMP_WIDTH;
+    bitmap.height = BMP_HEIGHT;
+    bitmap.pitch = BMP_WIDTH;
+    bitmap.depth = 8;
+    cart.rom = start;
+    cart.pages = (size / 0x4000);
+    cart.type = TYPE_SMS;
+    return 1;
+}
 
-int load_rom()
+int load_romold(int size)
 {
     int i;
-    int size;
-    
+
     uint8_t *start = (uint8_t *)SMS_FILE_ADDR;
     uint8_t *rom = start + sizeof(uint32_t);
     uint32_t *rom_size = (uint32_t *)(SMS_FILE_ADDR);
@@ -128,9 +144,9 @@ int load_rom()
         rom += 512;
     }
     cart.rom = rom;
-    cart.pages = (size / 0x4000);
-    //cart.crc = crc32(0L, cart.rom, size);
-    
+    cart.pages = (0x40000 / 0x4000);
+    // cart.crc = crc32(0L, cart.rom, size);
+
     // uint8_t *temprom = malloc(size * sizeof(uint8_t));
     // memcpy(temprom, cart.rom, size);
     // sha1(cart.sha1, temprom, size);
