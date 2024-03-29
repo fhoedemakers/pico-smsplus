@@ -1,3 +1,7 @@
+# Work in progress
+
+**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors are not displayed correctly and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
+
 # pico-smsplus
 
 This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System emulator for RP2040 based microcontroller boards like the RaspberryPi Pico. Supports video and audio output over HDMI.
@@ -23,10 +27,6 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 Click on image below to see a demo video.
 
 [![Video](https://img.youtube.com/vi/__E8h2Ay3g8/0.jpg)](https://www.youtube.com/watch?v=__E8h2Ay3g8)
-
-## Work in progress
-
-**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors don't feel right and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
 
 Things to do (if possible):
 
