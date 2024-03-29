@@ -3,7 +3,8 @@ name: Build and create a release when tag is pushed
 # Only deploy when a new tag is pushed
 # git tag v0.n
 # git push origin v0.n 
-#
+# NOTE: Executables built with this pipeline cause an out of memory panic on the RP2040
+#       Maybe due to an SDK update. Muste be investigated. Do not use this pipeline for now.
 on:
     push:
         tags:
