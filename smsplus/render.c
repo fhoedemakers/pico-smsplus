@@ -602,10 +602,13 @@ void in_ram(render_obj)(int line)
 /* Update pattern cache with modified tiles */
 
 extern void sms_palette_sync(int index);
+extern void sms_palette_syncGG(int index);
 
 /* Update a palette entry */
 void in_ram(palette_sync)(int index)
 {
+    // FH: Changed begin
+#if 0
     int r, g, b;
 
     if (IS_GG)
@@ -620,15 +623,22 @@ void in_ram(palette_sync)(int index)
         g = ((vdp.cram[index] >> 2) & 3) << 6;
         b = ((vdp.cram[index] >> 4) & 3) << 6;
     }
-    // print cdp.cram[index] as binary
-    //printf("Palette %d: %d%d%d%d%d%d%d%d\n", index, (vdp.cram[index] >> 7) & 1, (vdp.cram[index] >> 6) & 1, (vdp.cram[index] >> 5) & 1, (vdp.cram[index] >> 4) & 1, (vdp.cram[index] >> 3) & 1, (vdp.cram[index] >> 2) & 1, (vdp.cram[index] >> 1) & 1, (vdp.cram[index] >> 0) & 1);
+   
     bitmap.pal.color[index][0] = r;
     bitmap.pal.color[index][1] = g;
     bitmap.pal.color[index][2] = b;
-    // FH bitmap.pal.colorindex[index] = vdp.cram[index];
+  
     pixel[index] = MAKE_PIXEL(r, g, b);
+#endif
+    // FH: Changed end
 
     bitmap.pal.dirty[index] = bitmap.pal.update = 1;
-
-    sms_palette_sync(index);
+    if (IS_GG)
+    {
+        sms_palette_syncGG(index);
+    }
+    else
+    {
+        sms_palette_sync(index);
+    }
 }

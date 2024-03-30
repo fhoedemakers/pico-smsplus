@@ -71,9 +71,8 @@ typedef struct {
     int pitch;
     int depth;
     struct {
-        uint8 color[32][3];
+        // FH uint8 color[32][3];
         uint8 dirty[32];
-        // FH uint8 colorindex[32];
         uint8 update;
     } pal;
 } t_bitmap;
