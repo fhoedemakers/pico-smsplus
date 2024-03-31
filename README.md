@@ -10,8 +10,6 @@ The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](htt
 
 ## System requirements - What do yo need?
 
-> For more detailed instructions and specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus). (For using a breadboard with components or how to use an Original NES or WII-classic controller.)
-
 The binary specific for your config can be downloaded from the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
 ## For Raspberry Pi Pico / Pico W
 
@@ -25,6 +23,8 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 
 - [Adafruit Feather RP2040 with DVI Output](https://www.adafruit.com/product/5710) and [FeatherWing - RTC + SD](https://www.adafruit.com/product/2922).
 - [Waveshare RP2040-PiZero Development Board](https://www.waveshare.com/rp2040-pizero.htm)
+
+> For more detailed instructions and specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus). (For using a breadboard with components or how to use an Original NES or WII-classic controller.)
 
 ## Video
 Click on image below to see a demo video.
