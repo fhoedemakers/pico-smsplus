@@ -15,6 +15,7 @@ The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](htt
 
 - Raspberry Pi Pico and [Pimoroni Pico DV Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-dv-demo-base?variant=39494203998291)
 - [Custom Printed Circuit Board](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico)
+- Breadboard with components.
 
 ## Other RP2040 based boards
 
