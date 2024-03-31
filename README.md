@@ -10,7 +10,7 @@ The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](htt
 
 ## System requirements - What do yo need?
 
-> For more detailed instructions and other configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus). (For using a breadboard with components or how to use an Original NES or WII-classic controller.)
+> For more detailed instructions and specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus). (For using a breadboard with components or how to use an Original NES or WII-classic controller.)
 
 The binary specific for your config can be downloaded in the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
 ## For Raspberry Pi Pico / Pico W
