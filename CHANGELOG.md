@@ -13,6 +13,19 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.3
+
+### Features
+
+- Added framerate toggle (START + A)
+
+### Fixes
+
+- Fixed colors not rendered properly in the emulator ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4)
+- Preserving memory by sharing memory between emulator, main and menu.
+- Fixing colors not rendered properly in menu
+
+
 ## v0.2
 
 ### Features
