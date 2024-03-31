@@ -13,7 +13,9 @@
 static uint8_t screenCropX = 0;
 static uint16_t screenBufferLine[256];
 static uint8_t smsBufferLine[SMS_WIDTH];
-static int palette565[32];
+// FH - 2019-06-30: Added support for RGB444 in stead of RGB565
+static int palette444[32];
+
 static uint8_t sram[0x8000];
 /* SMS context */
 typedef struct {

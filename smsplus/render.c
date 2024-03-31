@@ -8,7 +8,7 @@ void (*render_bg)(int line);
 uint8 *linebuf;
 
 /* Precalculated pixel table */
-uint16 pixel[PALETTE_SIZE];
+//uint16 pixel[PALETTE_SIZE];
 
 // Each tile takes up 8*8=64 bytes. We have 512 tiles * 4 attribs, so 2K tiles max.
 #define CACHEDTILES 512
@@ -18,6 +18,12 @@ int16 cachePtr[512 * 4];            //(tile+attr<<9) -> cache tile store index (
 uint8 cacheStore[CACHEDTILES * 64]; // Tile store
 uint8 cacheStoreUsed[CACHEDTILES];  // Marks if a tile is used
 
+// Share memory for using in main.cpp and menu.cpp when emulator is not running
+uint8_t *getcachestorefromemulator(size_t *size) {
+    *size = CACHEDTILES * 64;
+    printf("Acquired cacheStore from emulator: %d bytes\n", *size);
+    return cacheStore;
+}
 uint8 is_vram_dirty;
 
 int cacheKillPtr = 0;
@@ -602,10 +608,13 @@ void in_ram(render_obj)(int line)
 /* Update pattern cache with modified tiles */
 
 extern void sms_palette_sync(int index);
+extern void sms_palette_syncGG(int index);
 
 /* Update a palette entry */
 void in_ram(palette_sync)(int index)
 {
+    // FH: Changed begin
+#if 0
     int r, g, b;
 
     if (IS_GG)
@@ -620,15 +629,22 @@ void in_ram(palette_sync)(int index)
         g = ((vdp.cram[index] >> 2) & 3) << 6;
         b = ((vdp.cram[index] >> 4) & 3) << 6;
     }
-    // print cdp.cram[index] as binary
-    //printf("Palette %d: %d%d%d%d%d%d%d%d\n", index, (vdp.cram[index] >> 7) & 1, (vdp.cram[index] >> 6) & 1, (vdp.cram[index] >> 5) & 1, (vdp.cram[index] >> 4) & 1, (vdp.cram[index] >> 3) & 1, (vdp.cram[index] >> 2) & 1, (vdp.cram[index] >> 1) & 1, (vdp.cram[index] >> 0) & 1);
+   
     bitmap.pal.color[index][0] = r;
     bitmap.pal.color[index][1] = g;
     bitmap.pal.color[index][2] = b;
-    // FH bitmap.pal.colorindex[index] = vdp.cram[index];
+  
     pixel[index] = MAKE_PIXEL(r, g, b);
+#endif
+    // FH: Changed end
 
     bitmap.pal.dirty[index] = bitmap.pal.update = 1;
-
-    sms_palette_sync(index);
+    if (IS_GG)
+    {
+        sms_palette_syncGG(index);
+    }
+    else
+    {
+        sms_palette_sync(index);
+    }
 }

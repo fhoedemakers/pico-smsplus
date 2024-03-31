@@ -14,7 +14,7 @@
 #include "menu.h"
 #include "nespad.h"
 #include "wiipad.h"
-
+#include "shared.h"
 #include "font_8x8.h"
 #define FONT_CHAR_WIDTH 8
 #define FONT_CHAR_HEIGHT 8
@@ -32,25 +32,14 @@
 extern util::ExclusiveProc exclProc_;
 extern std::unique_ptr<dvi::DVI> dvi_;
 void screenMode(int incr);
+extern WORD SMSPaletteRGB444[];
 
-// Just for now, reuse the NesPalette from the InfoNes emulator to render colors
-#define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
-const WORD NesPalette[64] = {
-    CC(0x39ce), CC(0x1071), CC(0x0015), CC(0x2013), CC(0x440e), CC(0x5402), CC(0x5000), CC(0x3c20),
-    CC(0x20a0), CC(0x0100), CC(0x0140), CC(0x00e2), CC(0x0ceb), CC(0x0000), CC(0x0000), CC(0x0000),
-    CC(0x5ef7), CC(0x01dd), CC(0x10fd), CC(0x401e), CC(0x5c17), CC(0x700b), CC(0x6ca0), CC(0x6521),
-    CC(0x45c0), CC(0x0240), CC(0x02a0), CC(0x0247), CC(0x0211), CC(0x0000), CC(0x0000), CC(0x0000),
-    CC(0x7fff), CC(0x1eff), CC(0x2e5f), CC(0x223f), CC(0x79ff), CC(0x7dd6), CC(0x7dcc), CC(0x7e67),
-    CC(0x7ae7), CC(0x4342), CC(0x2769), CC(0x2ff3), CC(0x03bb), CC(0x0000), CC(0x0000), CC(0x0000),
-    CC(0x7fff), CC(0x579f), CC(0x635f), CC(0x6b3f), CC(0x7f1f), CC(0x7f1b), CC(0x7ef6), CC(0x7f75),
-    CC(0x7f94), CC(0x73f4), CC(0x57d7), CC(0x5bf9), CC(0x4ffe), CC(0x0000), CC(0x0000), CC(0x0000)};
-
-#define CBLACK 15
-#define CWHITE 48
-#define CRED 6
-#define CGREEN 10
-#define CBLUE 2
-#define CLIGHTBLUE 0x2C
+#define CBLACK 0
+#define CWHITE 0x3f
+#define CRED 3
+#define CGREEN 0x40
+#define CBLUE 0x54
+#define CLIGHTBLUE 0x63
 #define DEFAULT_FGCOLOR CBLACK // 60
 #define DEFAULT_BGCOLOR CWHITE
 
@@ -59,8 +48,8 @@ static int bgcolor = DEFAULT_BGCOLOR;
 
 struct charCell
 {
-    uint8_t fgcolor : 4;
-    uint8_t bgcolor : 4;
+    uint8_t fgcolor;
+    uint8_t bgcolor;
     char charvalue;
 };
 
@@ -99,13 +88,13 @@ void RomSelect_DrawLine(int line, int selectedRow)
         uint c = screenBuffer[charIndex].charvalue;
         if (row == selectedRow)
         {
-            fgcolor = NesPalette[screenBuffer[charIndex].bgcolor];
-            bgcolor = NesPalette[screenBuffer[charIndex].fgcolor];
+            fgcolor = SMSPaletteRGB444[screenBuffer[charIndex].bgcolor];
+            bgcolor = SMSPaletteRGB444[screenBuffer[charIndex].fgcolor];
         }
         else
         {
-            fgcolor = NesPalette[screenBuffer[charIndex].fgcolor];
-            bgcolor = NesPalette[screenBuffer[charIndex].bgcolor];
+            fgcolor = SMSPaletteRGB444[screenBuffer[charIndex].fgcolor];
+            bgcolor = SMSPaletteRGB444[screenBuffer[charIndex].bgcolor];
         }
 
         int rowInChar = line % FONT_CHAR_HEIGHT;
@@ -362,7 +351,8 @@ static char *globalErrorMessage;
 
 
 //
-BYTE dirbuffer[10 * 1024];
+BYTE *dirbuffer;
+
 void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
 {
     FLASH_ADDRESS = NES_FILE_ADDR;
@@ -384,7 +374,9 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     /// size_t chr_size;
     // Borrow ChrBuffer to store directory contents
     // void *buffer = InfoNes_GetChrBuf(&chr_size);
-    Frens::RomLister romlister(dirbuffer, sizeof(dirbuffer));
+    size_t bufsize;
+    dirbuffer = (BYTE *) getcachestorefromemulator(&bufsize);
+    Frens::RomLister romlister(dirbuffer, bufsize);
     clearinput();
     if (strlen(errorMessage) > 0)
     {

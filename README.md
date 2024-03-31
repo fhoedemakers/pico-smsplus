@@ -1,6 +1,6 @@
 # Work in progress
 
-**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, colors are not displayed correctly ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4)) and the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
+**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)**
 
 # pico-smsplus
 
@@ -68,7 +68,7 @@ The _debug.sh scripts can be use to create a debug build for each system.
 
 ## Things to do (if possible):
 
-- [ ] Improve colors. Colors are not displayed correctly. Maybe it is flawed in the emulator.  ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4))
+- [x] Improve colors. Colors are not displayed correctly. Maybe it is flawed in the emulator.  ([issue #4](https://github.com/fhoedemakers/pico-smsplus/issues/4))
 - [x] Implement audio (but needs improvement)
 - [ ] Improve performance
 - [x] USB Controller support

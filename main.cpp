@@ -60,26 +60,19 @@ static uint32_t fps = 0;
 
 bool reset = false;
 
-// const int __not_in_flash_func(SMSPalette)[64] = {
-//     0x000000, 0x550000, 0xAA0000, 0xFF0000, 0x000055, 0x550055, 0xAA0055, 0xFF0055,
-//     0x005500, 0x555500, 0xAA5500, 0xFF5500, 0x005555, 0x555555, 0xAA5555, 0xFF5555,
-//     0x00AA00, 0x55AA00, 0xAAAA00, 0xFFAA00, 0x00AA55, 0x55AA55, 0xAAAA55, 0xFFAA55,
-//     0x00FF00, 0x55FF00, 0xAAFF00, 0xFFFF00, 0x00FF55, 0x55FF55, 0xAAFF55, 0xFFFF55,
-//     0x0000AA, 0x5500AA, 0xAA00AA, 0xFF00AA, 0x0000FF, 0x5500FF, 0xAA00FF, 0xFF00FF,
-//     0x0055AA, 0x5555AA, 0xAA55AA, 0xFF55AA, 0x00FF55, 0x5555FF, 0xAA55FF, 0xFF55FF,
-//     0x00AAAA, 0x55AAAA, 0xAAAAAA, 0xFFAAAA, 0x00AAFF, 0x55AAFF, 0xAAAAFF, 0xFFAAFF,
-//     0x00FFAA, 0x55FFAA, 0xAAFFAA, 0xFFFFAA, 0x00FFFF, 0x55FFFF, 0xAAFFFF, 0xFFFFFF};
-
-// https://en.wikipedia.org/wiki/List_of_video_game_console_palettes
-// const int __not_in_flash_func(SMSPalette)[64] = {
-//     0x000000, 0x000055, 0x0000AA, 0x0000FF, 0x550000, 0x550055, 0x5500AA, 0x5500FF,
-//     0xAA0000, 0xAA0055, 0xAA00AA, 0xAA00FF, 0xFF0000, 0xFF0055, 0xFF00AA, 0xFF00FF,
-//     0x005500, 0x005555, 0x0055AA, 0x0055FF, 0x555500, 0x555555, 0x5555AA, 0x5555FF,
-//     0xAA5500, 0xAA5555, 0xAA55AA, 0xAA55FF, 0xFF5500, 0xFF5555, 0xFF55AA, 0xFF55FF,
-//     0x00AA00, 0x00AA55, 0x00AAAA, 0x00AAFF, 0x55AA00, 0x55AA55, 0x55AAAA, 0x55AAFF,
-//     0xAAAA00, 0xAAAA555, 0xAAAAAA, 0xAAAAFF, 0xFFAA00, 0xFFAA55, 0xFFAAAA, 0xFFAAFF,
-//     0x00FF00, 0x00FF55, 0x00FFAA, 0x00FFFF, 0x55FF00, 0x55FF55, 0x55FFAA, 0x55FFFF,
-//     0xAAFF00, 0xAAFF55, 0xAAFFAA, 0xAAFFFF, 0xFFFF00, 0xFFFF55, 0xFFFFAA, 0xFFFFFF};
+// The Sega Master system color palette converted to RGB444
+// so it can be used with the DVI library.
+// from https://segaretro.org/Palette
+WORD SMSPaletteRGB444[64] = {
+    0x0, 0x500, 0xA00, 0xF00, 0x50, 0x550, 0xA50, 0xF50,
+    0xA0, 0x5A0, 0xAA0, 0xFA0, 0xF0, 0x5F0, 0xAF0, 0xFF0,
+    0x5, 0x505, 0xA05, 0xF05, 0x55, 0x555, 0xA55, 0xF55,
+    0xA5, 0x5A5, 0xAA5, 0xFA5, 0xF5, 0x5F5, 0xAF5, 0xFF5,
+    0xA, 0x50A, 0xA0A, 0xF0A, 0x5A, 0x55A, 0xA5A, 0xF5A,
+    0xAA, 0x5AA, 0xAAA, 0xFAA, 0xFA, 0x5FA, 0xAFA, 0xFFA,
+    0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
+    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF
+    };
 
 namespace
 {
@@ -298,90 +291,29 @@ uint32_t time_us()
     absolute_time_t t = get_absolute_time();
     return to_us_since_boot(t);
 }
-// #define CC(x) (((x >> 1) & 15) | (((x >> 6) & 15) << 4) | (((x >> 11) & 15) << 8))
+
+extern "C" void in_ram(sms_palette_syncGG)(int index) {
+    // The GG has a different palette format
+    // TODO: Implement
+}
+
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
-    int r, g, b;
-
-    // FH START
-    // uint8_t paletteIndex = bitmap.pal.colorindex[index];
-    // int colorfrompallette = SMSPalette[paletteIndex];
-    // palette565[index] = CC(colorfrompallette);
-    // return;
-    // FH END
-
-    // Calculate the correct rgb color values
-    // The R, G and B values are binary 0b01 0b10 0b11 0b00 shifted 6 bits to the left
-    // So 0b01 = 0b01000000 = 64, 0b10 = 10000000 = 128, 0b11 = 11000000 = 192, 0b00 = 00000000 = 0
-    // See https://segaretro.org/Palette for more information
-    //
-
-    switch (bitmap.pal.color[index][0])
-    {
-    case 64:
-        r = 85;
-        break;
-    case 128:
-        r = 170;
-        break;
-    case 192:
-        r = 255;
-        break;
-    case 0:
-        r = 0;
-        break;
-    default:
-        printf("Unknown color %d\n", bitmap.pal.color[index][0]);
-        r = 0;
-        break;
-    }
-    switch (bitmap.pal.color[index][1])
-    {
-    case 64:
-        g = 85;
-        break;
-    case 128:
-        g = 170;
-        break;
-    case 192:
-        g = 255;
-        break;
-    case 0:
-        g = 0;
-        break;
-    default:
-        printf("Unknown color %d\n", bitmap.pal.color[index][1]);
-        g = 0;
-        break;
-    }
-    switch (bitmap.pal.color[index][2])
-    {
-    case 64:
-        b = 85;
-        break;
-    case 128:
-        b = 170;
-        break;
-    case 192:
-        b = 255;
-        break;
-    case 0:
-        b = 0;
-        break;
-    default:
-        printf("Unknown color %d\n", bitmap.pal.color[index][2]);
-        b = 0;
-        break;
-    }
-
-    // MAKE_PIXEL and expression below are equivalent
-    // uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-    // printf("palette[%d] = %x:%x\n", index, rgb565, MAKE_PIXEL(r, g, b));
-
-    // store the color in the palette
-    palette565[index] = MAKE_PIXEL(r, g, b);
+    
+    // Get SMS palette color index from CRAM
+    WORD r = ((vdp.cram[index] >> 0) & 3);
+    WORD g = ((vdp.cram[index] >> 2) & 3);
+    WORD b = ((vdp.cram[index] >> 4) & 3);
+    WORD tableIndex = b << 4 | g << 2 | r;
+    // Get the RGB444 color from the SMS palette
+    palette444[index] = SMSPaletteRGB444[tableIndex];
+    return;
 }
+
 #define SCANLINEOFFSET 25
+
+#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
+#define FPSEND   ((FPSSTART) + 8)
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
     // screen line 0 - 3 do not use
@@ -409,7 +341,36 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     uint16_t *sbuffer = b->data() + 32;
     for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
     {
-        sbuffer[i - screenCropX] = palette565[(buffer[i + BMP_X_OFFSET]) & 31];
+        sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+    }
+    // Display frame rate
+    if (fps_enabled && line >= FPSSTART && line < FPSEND)
+    {    
+        char fpsString[2];
+        WORD *fpsBuffer = b->data() + 40;
+        WORD fgc = SMSPaletteRGB444[0];
+        WORD bgc = SMSPaletteRGB444[0x3f];
+        fpsString[0] = '0' + (fps / 10);
+        fpsString[1] = '0' + (fps % 10);
+
+        int rowInChar = line % 8;
+        for (auto i = 0; i < 2; i++)
+        {
+            char firstFpsDigit = fpsString[i];
+            char fontSlice = getcharslicefrom8x8font(firstFpsDigit, rowInChar);
+            for (auto bit = 0; bit < 8; bit++)
+            {
+                if (fontSlice & 1)
+                {
+                    *fpsBuffer++ = fgc;
+                }
+                else
+                {
+                    *fpsBuffer++ = bgc;
+                }
+                fontSlice >>= 1;
+            }
+        }
     }
     dvi_->setLineBuffer(line, b);
     if (line == (SMS_HEIGHT + SCANLINEOFFSET - 1))
@@ -740,9 +701,10 @@ int main()
         if (fr == FR_NO_FILE)
         {
             printf("Start not pressed, flashing rom.\n ");
-            // Allocate 4k buffer. This is the smallest amount that can be flashed at once.
-            size_t bufsize = 0x2000;  
-            BYTE *buffer = (BYTE *)malloc(bufsize);
+            // Allocate buffer for flashing. Borrow emulator memory for this.
+            size_t bufsize = 0;  // 0x2000;
+            BYTE *buffer =   getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+            
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
             printf("write %s rom to flash %x\n", selectedRom, ofs);
             fr = f_open(&fil, selectedRom, FA_READ);
@@ -805,7 +767,7 @@ int main()
                 printf("%s\n", ErrorMessage);
                 selectedRom[0] = 0;
             }
-            free(buffer);
+            //free(buffer);
         }
         else
         {
