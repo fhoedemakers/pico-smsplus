@@ -1,6 +1,6 @@
 # Work in progress
 
-**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner)** There maybe some red flicker between screens.
+**This is a work in progress, and there are still some issues to be fixed. The video is not as smooth as it should be, the emulator is also not very fast, and some games may not run at full speed or at all. (afterburner). There maybe some occasionally red flicker between screens. **
 
 # pico-smsplus
 
