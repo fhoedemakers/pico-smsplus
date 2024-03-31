@@ -54,7 +54,7 @@ Gamepad buttons:
 - SELECT + START: Resets back to the SD Card menu. Game saves are saved to the SD card.
 - SELECT + UP/SELECT + DOWN: switches screen modes.
 - SELECT + A/B: toggle rapid-fire.
-- START + A : Toggle framerate display
+- START + A : Toggle framerate display.
 
 ## Building from source
 
