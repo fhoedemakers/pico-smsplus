@@ -8,7 +8,7 @@ void (*render_bg)(int line);
 uint8 *linebuf;
 
 /* Precalculated pixel table */
-uint16 pixel[PALETTE_SIZE];
+//uint16 pixel[PALETTE_SIZE];
 
 // Each tile takes up 8*8=64 bytes. We have 512 tiles * 4 attribs, so 2K tiles max.
 #define CACHEDTILES 512
