@@ -311,6 +311,9 @@ extern "C" void in_ram(sms_palette_sync)(int index)
 }
 
 #define SCANLINEOFFSET 25
+
+#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
+#define FPSEND   ((FPSSTART) + 8)
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
     // screen line 0 - 3 do not use
@@ -339,6 +342,35 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
     {
         sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+    }
+    // Display frame rate
+    if (fps_enabled && line >= FPSSTART && line < FPSEND)
+    {    
+        char fpsString[2];
+        WORD *fpsBuffer = b->data() + 40;
+        WORD fgc = SMSPaletteRGB444[0];
+        WORD bgc = SMSPaletteRGB444[0x3f];
+        fpsString[0] = '0' + (fps / 10);
+        fpsString[1] = '0' + (fps % 10);
+
+        int rowInChar = line % 8;
+        for (auto i = 0; i < 2; i++)
+        {
+            char firstFpsDigit = fpsString[i];
+            char fontSlice = getcharslicefrom8x8font(firstFpsDigit, rowInChar);
+            for (auto bit = 0; bit < 8; bit++)
+            {
+                if (fontSlice & 1)
+                {
+                    *fpsBuffer++ = fgc;
+                }
+                else
+                {
+                    *fpsBuffer++ = bgc;
+                }
+                fontSlice >>= 1;
+            }
+        }
     }
     dvi_->setLineBuffer(line, b);
     if (line == (SMS_HEIGHT + SCANLINEOFFSET - 1))
