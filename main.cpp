@@ -669,9 +669,10 @@ int main()
         if (fr == FR_NO_FILE)
         {
             printf("Start not pressed, flashing rom.\n ");
-            // Allocate 4k buffer. This is the smallest amount that can be flashed at once.
-            size_t bufsize = 0x2000;
-            BYTE *buffer = (BYTE *)malloc(bufsize);
+            // Allocate buffer for flashing. Borrow emulator memory for this.
+            size_t bufsize = 0;  // 0x2000;
+            BYTE *buffer =   getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+            
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
             printf("write %s rom to flash %x\n", selectedRom, ofs);
             fr = f_open(&fil, selectedRom, FA_READ);
@@ -734,7 +735,7 @@ int main()
                 printf("%s\n", ErrorMessage);
                 selectedRom[0] = 0;
             }
-            free(buffer);
+            //free(buffer);
         }
         else
         {

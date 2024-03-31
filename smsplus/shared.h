@@ -46,7 +46,7 @@ extern "C" {
 #include "system.h"
 
 char unalChar(const char *adr);
-
+uint8_t *getcachestorefromemulator(size_t *size);
 #ifdef __cplusplus
 }
 #endif

@@ -18,6 +18,12 @@ int16 cachePtr[512 * 4];            //(tile+attr<<9) -> cache tile store index (
 uint8 cacheStore[CACHEDTILES * 64]; // Tile store
 uint8 cacheStoreUsed[CACHEDTILES];  // Marks if a tile is used
 
+// Share memory for using in main.cpp and menu.cpp when emulator is not running
+uint8_t *getcachestorefromemulator(size_t *size) {
+    *size = CACHEDTILES * 64;
+    printf("Acquired cacheStore from emulator: %d bytes\n", *size);
+    return cacheStore;
+}
 uint8 is_vram_dirty;
 
 int cacheKillPtr = 0;

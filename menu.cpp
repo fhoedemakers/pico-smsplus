@@ -14,7 +14,7 @@
 #include "menu.h"
 #include "nespad.h"
 #include "wiipad.h"
-
+#include "shared.h"
 #include "font_8x8.h"
 #define FONT_CHAR_WIDTH 8
 #define FONT_CHAR_HEIGHT 8
@@ -351,7 +351,8 @@ static char *globalErrorMessage;
 
 
 //
-BYTE dirbuffer[10 * 1024];
+BYTE *dirbuffer;
+
 void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
 {
     FLASH_ADDRESS = NES_FILE_ADDR;
@@ -373,7 +374,9 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     /// size_t chr_size;
     // Borrow ChrBuffer to store directory contents
     // void *buffer = InfoNes_GetChrBuf(&chr_size);
-    Frens::RomLister romlister(dirbuffer, sizeof(dirbuffer));
+    size_t bufsize;
+    dirbuffer = (BYTE *) getcachestorefromemulator(&bufsize);
+    Frens::RomLister romlister(dirbuffer, bufsize);
     clearinput();
     if (strlen(errorMessage) > 0)
     {
