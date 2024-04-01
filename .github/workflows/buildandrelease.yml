@@ -26,7 +26,7 @@ permissions:
 # Build binary and send to releases
 jobs:
     build-release:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-20.04
         name: Build and create release
         steps:
           
@@ -44,7 +44,7 @@ jobs:
           - name: Update line containing pico_set_program_version() in CMakelists.txt with tag name.
             run: |
                  # Extract the tag name that triggered the event and remove the 'refs/tags/' prefix
-                 cat pico_lib/dvi/dvi.cpp
+                 arm-none-eabi-gcc --version
                  input_string=${{ github.ref }}
                  prefix="refs/tags/"
                  tag="No versioninfo found"
