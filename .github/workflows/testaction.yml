@@ -2,9 +2,16 @@ on:
     workflow_dispatch:
         
 jobs:
-      log-the-inputs:
+    build-release:
         runs-on: ubuntu-latest
-        steps:
-          - run: |
-              echo "Log level: Hello World"
-        
+        name: Build and create release
+        steps:                                         
+          - name: Check out this repository with submodules
+            uses: actions/checkout@v2
+            with:
+                submodules: recursive
+          
+          - name: Update line containing pico_set_program_version() in CMakelists.txt with tag name.
+            run: |
+                cat pico_lib/dvi/dvi.cpp
+              
