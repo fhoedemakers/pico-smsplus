@@ -20,5 +20,5 @@ jobs:
           
           - name: gcc version
             run: |
-                gcc --version
+                 arm-none-eabi-gcc --version
               
