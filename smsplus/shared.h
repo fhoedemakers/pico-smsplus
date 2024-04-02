@@ -10,6 +10,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
 #include "loadrom.h"
 
 #define VERSION     "0.9.4a"

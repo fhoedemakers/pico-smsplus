@@ -32,6 +32,7 @@
 #include "menu.h"
 #include "nespad.h"
 #include "wiipad.h"
+#include "FrensHelpers.h"
 #ifdef __cplusplus
 
 #include "ff.h"
@@ -619,6 +620,7 @@ int main()
     char errMSG[ERRORMESSAGESIZE];
     errMSG[0] = selectedRom[0] = 0;
     int fileSize = 0;
+    bool isGameGear = false;
     FIL fil;
     FIL fil2;
     FRESULT fr;
@@ -664,6 +666,9 @@ int main()
             {
                 // determine file size
                 selectedRom[r] = 0;
+                isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
+                printf("Current game: %s\n", selectedRom);
+                printf("Console is %s\n", isGameGear ? "Game Gear" : "Master System");
                 printf("Determine filesize of %s\n", selectedRom);
                 fr2 = f_open(&fil2, selectedRom, FA_READ);
                 if (fr2 == FR_OK)
@@ -827,7 +832,7 @@ int main()
         }
         reset = false;
         printf("Now playing: %s\n", selectedRom);
-        load_rom(fileSize);
+        load_rom(fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any
