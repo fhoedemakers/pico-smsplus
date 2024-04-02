@@ -58,7 +58,7 @@ Gamepad buttons:
 
 ## Building from source
 
-> Emulator sound sound output is corrupted when building using arm-none-eabi-gcc v10.3.1 or higher. See issue [#6](https://github.com/fhoedemakers/pico-smsplus/issues/6) for more information.
+> Emulator sound output is corrupted when building using arm-none-eabi-gcc v10.3.1 or higher. See issue [#6](https://github.com/fhoedemakers/pico-smsplus/issues/6) for more information.
 
 When using Visual Studio code, make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.
 
