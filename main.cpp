@@ -299,6 +299,16 @@ uint32_t time_us()
 extern "C" void in_ram(sms_palette_syncGG)(int index) {
     // The GG has a different palette format
     // TODO: Implement
+    int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
+    int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
+    int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
+    // print values
+    //printf("index: %d, r: %d, g: %d, b: %d\n", index, r, g, b);
+
+     int r444 = ((r << 4) + 127) >> 8;  // equivalent to (r888 * 15 + 127) / 255
+     int g444 = ((g << 4) + 127) >> 8;  // equivalent to (g888 * 15 + 127) / 255
+     int b444 = ((b << 4) + 127) >> 8;
+      palette444[index] = (r444 << 8) | (g444 << 4) | b444;
 }
 
 extern "C" void in_ram(sms_palette_sync)(int index)
@@ -325,6 +335,8 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // SMS renders 192 lines
 
     // Audio needs to be processed per scanline
+    // gg : Line starts at 24
+    // sms: Line starts at 0
     processaudio(line);
     line += SCANLINEOFFSET;
     if (line < 4)
