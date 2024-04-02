@@ -57,6 +57,9 @@ char *romName;
 static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
+static char fpsString[3] = "00";
+#define fpsfgcolor  0;         // black
+#define fpsbgcolor  0xFFF;     // white
 
 bool reset = false;
 
@@ -346,13 +349,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
     {    
-        char fpsString[2];
-        WORD *fpsBuffer = b->data() + 40;
-        WORD fgc = SMSPaletteRGB444[0];
-        WORD bgc = SMSPaletteRGB444[0x3f];
-        fpsString[0] = '0' + (fps / 10);
-        fpsString[1] = '0' + (fps % 10);
-
+        WORD *fpsBuffer = b->data() + 40;      
         int rowInChar = line % 8;
         for (auto i = 0; i < 2; i++)
         {
@@ -362,11 +359,11 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             {
                 if (fontSlice & 1)
                 {
-                    *fpsBuffer++ = fgc;
+                    *fpsBuffer++ = fpsfgcolor;
                 }
                 else
                 {
-                    *fpsBuffer++ = bgc;
+                    *fpsBuffer++ = fpsbgcolor;
                 }
                 fontSlice >>= 1;
             }
@@ -461,6 +458,9 @@ int ProcessAfterFrameIsRendered()
         uint32_t tick_us = time_us() - start_tick_us;
         fps = (1000000 - 1) / tick_us + 1;
         start_tick_us = time_us();
+        fpsString[0] = '0' + (fps / 10);
+        fpsString[1] = '0' + (fps % 10);
+        
     }
     return count;
 }
