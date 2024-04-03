@@ -110,7 +110,6 @@ int load_rom(int size, bool isGameGear)
     cart.rom = start;
     cart.pages = (size / 0x4000);
     cart.type = isGameGear ? TYPE_GG : TYPE_SMS;
-    memset(smsBufferLineBlank, 0, sizeof(smsBufferLineBlank));
     return 1;
 }
 
