@@ -289,8 +289,10 @@ extern void sms_render_line(int line, const uint8_t *buffer);
 void in_ram(render_line)(int line)
 {
     /* Ensure we're within the viewport range */
-    if ((line < vp_vstart) || (line >= vp_vend))
+    if ((line < vp_vstart) || (line >= vp_vend)) {
+        sms_render_line(line, smsBufferLineBlank);
         return;
+    }
 
     /* Point to current line in output buffer */
     // linebuf = &bitmap.data[(line * bitmap.pitch)];

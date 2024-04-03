@@ -62,6 +62,11 @@ static char fpsString[3] = "00";
 #define fpsfgcolor  0;         // black
 #define fpsbgcolor  0xFFF;     // white
 
+#define SCANLINEOFFSET 25
+#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
+#define FPSEND   ((FPSSTART) + 8)
+static int firstscanline = 0;
+
 bool reset = false;
 
 // The Sega Master system color palette converted to RGB444
@@ -254,7 +259,8 @@ int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
     int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
-    if (offset == 0)
+   
+    if (offset == (IS_GG ? 24 : 0))
     {
         sampleIndex = 0;
     }
@@ -324,10 +330,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     return;
 }
 
-#define SCANLINEOFFSET 25
 
-#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
-#define FPSEND   ((FPSSTART) + 8)
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
     // screen line 0 - 3 do not use
@@ -338,23 +341,24 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // gg : Line starts at 24
     // sms: Line starts at 0
     processaudio(line);
-    line += SCANLINEOFFSET;
-    if (line < 4)
+    line+=4;
+    //line += SCANLINEOFFSET;
+    if (line < 4 || line >= 236)   // 236
         return;
-    if (line == SCANLINEOFFSET)
-    {
-        // insert blank lines on top
-        for (int bl = 4; bl < SCANLINEOFFSET; bl++)
-        {
-            auto blank = dvi_->getLineBuffer();
-            uint16_t *sbuffer = blank->data() + 32;
-            __builtin_memset(sbuffer, 0, 512);
-            dvi_->setLineBuffer(bl, blank);
-        }
-    }
-
+    // if (line == firstscanline)
+    // {
+    //     // insert blank lines on top
+        
+    //     for (int bl = 4; bl < line; bl++)
+    //     {         
+    //         auto blank = dvi_->getLineBuffer();
+    //         uint16_t *sbuffer = blank->data() + 32;
+    //         __builtin_memset(sbuffer, 0, 512);
+    //         dvi_->setLineBuffer(bl, blank);
+    //     }
+    // }
     auto b = dvi_->getLineBuffer();
-    uint16_t *sbuffer = b->data() + 32;
+    uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
     for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
     {
         sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
@@ -382,18 +386,21 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             }
         }
     }
-    dvi_->setLineBuffer(line, b);
-    if (line == (SMS_HEIGHT + SCANLINEOFFSET - 1))
-    {
-        // insert blank lines on bottom
-        for (int bl = line + 1; bl < 236; bl++)
-        {
-            auto blank = dvi_->getLineBuffer();
-            uint16_t *sbuffer = blank->data() + 32;
-            __builtin_memset(sbuffer, 0, 512);
-            dvi_->setLineBuffer(bl, blank);
-        }
-    }
+    dvi_->setLineBuffer(line , b);
+    // if (line == (SMS_HEIGHT + SCANLINEOFFSET - BMP_Y_OFFSET - 1))
+    // {
+    //     // insert blank lines on bottom
+    //     // > 228 makes screen flicker on GG
+    //     int lastline = IS_GG ? 228 : 236;
+    //     for (int bl = line + 1; bl < lastline; bl++) 
+    //     //for (int bl = line + 1; bl < 228; bl++)
+    //     {
+    //         auto blank = dvi_->getLineBuffer();
+    //         uint16_t *sbuffer = blank->data() + 32;
+    //         __builtin_memset(sbuffer, 0, 512);
+    //         dvi_->setLineBuffer(bl, blank);
+    //     }
+    // }
 }
 
 void system_load_sram(void)
@@ -845,6 +852,7 @@ int main()
         reset = false;
         printf("Now playing: %s\n", selectedRom);
         load_rom(fileSize, isGameGear);
+        firstscanline = (SCANLINEOFFSET + BMP_Y_OFFSET);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any
