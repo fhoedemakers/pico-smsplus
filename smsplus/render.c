@@ -290,7 +290,7 @@ void in_ram(render_line)(int line)
 {
     /* Ensure we're within the viewport range */
     if ((line < vp_vstart) || (line >= vp_vend)) {
-        sms_render_line(line, smsBufferLineBlank);
+        sms_render_line(line, 0);
         return;
     }
 

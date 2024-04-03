@@ -59,12 +59,12 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
-#define fpsfgcolor  0;         // black
-#define fpsbgcolor  0xFFF;     // white
+#define fpsfgcolor 0;     // black
+#define fpsbgcolor 0xFFF; // white
 
 #define SCANLINEOFFSET 25
 #define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
-#define FPSEND   ((FPSSTART) + 8)
+#define FPSEND ((FPSSTART) + 8)
 static int firstscanline = 0;
 
 bool reset = false;
@@ -80,8 +80,7 @@ WORD SMSPaletteRGB444[64] = {
     0xA, 0x50A, 0xA0A, 0xF0A, 0x5A, 0x55A, 0xA5A, 0xF5A,
     0xAA, 0x5AA, 0xAAA, 0xFAA, 0xFA, 0x5FA, 0xAFA, 0xFFA,
     0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
-    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF
-    };
+    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF};
 
 namespace
 {
@@ -259,7 +258,7 @@ int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
     int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
-   
+
     if (offset == (IS_GG ? 24 : 0))
     {
         sampleIndex = 0;
@@ -302,24 +301,25 @@ uint32_t time_us()
     return to_us_since_boot(t);
 }
 
-extern "C" void in_ram(sms_palette_syncGG)(int index) {
+extern "C" void in_ram(sms_palette_syncGG)(int index)
+{
     // The GG has a different palette format
     // TODO: Implement
     int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
     int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
     int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
     // print values
-    //printf("index: %d, r: %d, g: %d, b: %d\n", index, r, g, b);
+    // printf("index: %d, r: %d, g: %d, b: %d\n", index, r, g, b);
 
-     int r444 = ((r << 4) + 127) >> 8;  // equivalent to (r888 * 15 + 127) / 255
-     int g444 = ((g << 4) + 127) >> 8;  // equivalent to (g888 * 15 + 127) / 255
-     int b444 = ((b << 4) + 127) >> 8;
-      palette444[index] = (r444 << 8) | (g444 << 4) | b444;
+    int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
+    int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
+    int b444 = ((b << 4) + 127) >> 8;
+    palette444[index] = (r444 << 8) | (g444 << 4) | b444;
 }
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
-    
+
     // Get SMS palette color index from CRAM
     WORD r = ((vdp.cram[index] >> 0) & 3);
     WORD g = ((vdp.cram[index] >> 2) & 3);
@@ -330,27 +330,27 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     return;
 }
 
-
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
-    // screen line 0 - 3 do not use
-    // screen Line 4 - 235 are the visible screen
-    // SMS renders 192 lines
-
+    // DVI screen line 0 - 3 do not use
+    // DVI screen Line 4 - 235 are the visible screen
+    // SMS has 192 lines
+    // GG  has 144 lines
+    // Emulator loops from scanline 0 to 261
     // Audio needs to be processed per scanline
     // gg : Line starts at 24
     // sms: Line starts at 0
     processaudio(line);
-    line+=4;
-    //line += SCANLINEOFFSET;
-    if (line < 4 || line >= 236)   // 236
+    line += 4;
+    // line += SCANLINEOFFSET;
+    if (line < 4 || line >= 236) // 236
         return;
     // if (line == firstscanline)
     // {
     //     // insert blank lines on top
-        
+
     //     for (int bl = 4; bl < line; bl++)
-    //     {         
+    //     {
     //         auto blank = dvi_->getLineBuffer();
     //         uint16_t *sbuffer = blank->data() + 32;
     //         __builtin_memset(sbuffer, 0, 512);
@@ -358,15 +358,22 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     //     }
     // }
     auto b = dvi_->getLineBuffer();
-    uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
-    for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+    uint16_t *sbuffer;
+    if (buffer)
     {
-        sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+        uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
+        for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+        {
+            sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+        }
+    } else {
+        sbuffer = b->data() + 32;
+        __builtin_memset(sbuffer, 0, 512);
     }
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
-    {    
-        WORD *fpsBuffer = b->data() + 40;      
+    {
+        WORD *fpsBuffer = b->data() + 40;
         int rowInChar = line % 8;
         for (auto i = 0; i < 2; i++)
         {
@@ -386,13 +393,13 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             }
         }
     }
-    dvi_->setLineBuffer(line , b);
+    dvi_->setLineBuffer(line, b);
     // if (line == (SMS_HEIGHT + SCANLINEOFFSET - BMP_Y_OFFSET - 1))
     // {
     //     // insert blank lines on bottom
     //     // > 228 makes screen flicker on GG
     //     int lastline = IS_GG ? 228 : 236;
-    //     for (int bl = line + 1; bl < lastline; bl++) 
+    //     for (int bl = line + 1; bl < lastline; bl++)
     //     //for (int bl = line + 1; bl < 228; bl++)
     //     {
     //         auto blank = dvi_->getLineBuffer();
@@ -480,7 +487,6 @@ int ProcessAfterFrameIsRendered()
         start_tick_us = time_us();
         fpsString[0] = '0' + (fps / 10);
         fpsString[1] = '0' + (fps % 10);
-        
     }
     return count;
 }
@@ -726,9 +732,9 @@ int main()
         {
             printf("Start not pressed, flashing rom.\n ");
             // Allocate buffer for flashing. Borrow emulator memory for this.
-            size_t bufsize = 0;  // 0x2000;
-            BYTE *buffer =   getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
-            
+            size_t bufsize = 0;                                 // 0x2000;
+            BYTE *buffer = getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
             printf("write %s rom to flash %x\n", selectedRom, ofs);
             fr = f_open(&fil, selectedRom, FA_READ);
@@ -791,7 +797,7 @@ int main()
                 printf("%s\n", ErrorMessage);
                 selectedRom[0] = 0;
             }
-            //free(buffer);
+            // free(buffer);
         }
         else
         {
