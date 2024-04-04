@@ -32,6 +32,7 @@
 #include "menu.h"
 #include "nespad.h"
 #include "wiipad.h"
+#include "FrensHelpers.h"
 #ifdef __cplusplus
 
 #include "ff.h"
@@ -57,6 +58,15 @@ char *romName;
 static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
+static char fpsString[3] = "00";
+#define fpsfgcolor 0;     // black
+#define fpsbgcolor 0xFFF; // white
+
+#define MARGINTOP 24
+#define MARGINBOTTOM 4
+
+#define FPSSTART (((MARGINTOP + 7) / 8) * 8)
+#define FPSEND ((FPSSTART) + 8)
 
 bool reset = false;
 
@@ -71,8 +81,7 @@ WORD SMSPaletteRGB444[64] = {
     0xA, 0x50A, 0xA0A, 0xF0A, 0x5A, 0x55A, 0xA5A, 0xF5A,
     0xAA, 0x5AA, 0xAAA, 0xFAA, 0xFA, 0x5FA, 0xAFA, 0xFFA,
     0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
-    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF
-    };
+    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF};
 
 namespace
 {
@@ -250,7 +259,8 @@ int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
     int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
-    if (offset == 0)
+
+    if (offset == (IS_GG ? 24 : 0))
     {
         sampleIndex = 0;
     }
@@ -292,67 +302,82 @@ uint32_t time_us()
     return to_us_since_boot(t);
 }
 
-extern "C" void in_ram(sms_palette_syncGG)(int index) {
+extern "C" void in_ram(sms_palette_syncGG)(int index)
+{
     // The GG has a different palette format
-    // TODO: Implement
+    int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
+    int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
+    int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
+   
+    int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
+    int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
+    int b444 = ((b << 4) + 127) >> 8;
+    palette444[index] = (r444 << 8) | (g444 << 4) | b444;
 }
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
-    
+#if 1
     // Get SMS palette color index from CRAM
     WORD r = ((vdp.cram[index] >> 0) & 3);
     WORD g = ((vdp.cram[index] >> 2) & 3);
     WORD b = ((vdp.cram[index] >> 4) & 3);
     WORD tableIndex = b << 4 | g << 2 | r;
-    // Get the RGB444 color from the SMS palette
+    // Get the RGB444 color from the SMS RGB444 palette
     palette444[index] = SMSPaletteRGB444[tableIndex];
+#endif 
+
+#if 0
+    // Alternative color rendering below
+    WORD r = ((vdp.cram[index] >> 0) & 3) << 6;
+    WORD g = ((vdp.cram[index] >> 2) & 3) << 6;
+    WORD b = ((vdp.cram[index] >> 4) & 3) << 6;
+    int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
+    int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
+    int b444 = ((b << 4) + 127) >> 8;
+    palette444[index] = (r444 << 8) | (g444 << 4) | b444;
+#endif
     return;
 }
 
-#define SCANLINEOFFSET 25
-
-#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
-#define FPSEND   ((FPSSTART) + 8)
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
-    // screen line 0 - 3 do not use
-    // screen Line 4 - 235 are the visible screen
-    // SMS renders 192 lines
-
+    // DVI top margin has #MARGINTOP lines
+    // DVI bottom margin has #MARGINBOTTOM lines
+    // DVI usable screen estate: MARGINTOP .. (240 - #MARGINBOTTOM)
+    // SMS has 192 lines
+    // GG  has 144 lines
+    // gg : Line starts at line 24
+    // sms: Line starts at line 0
+    // Emulator loops from scanline 0 to 261
     // Audio needs to be processed per scanline
+
     processaudio(line);
-    line += SCANLINEOFFSET;
-    if (line < 4)
+    // Adjust line number to center the emulator display
+    line += MARGINTOP;
+    // Only render lines that are visible on the screen, keeping into account top and bottom margins
+    if (line < MARGINTOP || line >= 240 - MARGINBOTTOM)
         return;
-    if (line == SCANLINEOFFSET)
-    {
-        // insert blank lines on top
-        for (int bl = 4; bl < SCANLINEOFFSET; bl++)
-        {
-            auto blank = dvi_->getLineBuffer();
-            uint16_t *sbuffer = blank->data() + 32;
-            __builtin_memset(sbuffer, 0, 512);
-            dvi_->setLineBuffer(bl, blank);
-        }
-    }
 
     auto b = dvi_->getLineBuffer();
-    uint16_t *sbuffer = b->data() + 32;
-    for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+    uint16_t *sbuffer;
+    if (buffer)
     {
-        sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+        uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
+        for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+        {
+            sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+        }
+    }
+    else
+    {
+        sbuffer = b->data() + 32;
+        __builtin_memset(sbuffer, 0, 512);
     }
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
-    {    
-        char fpsString[2];
+    {
         WORD *fpsBuffer = b->data() + 40;
-        WORD fgc = SMSPaletteRGB444[0];
-        WORD bgc = SMSPaletteRGB444[0x3f];
-        fpsString[0] = '0' + (fps / 10);
-        fpsString[1] = '0' + (fps % 10);
-
         int rowInChar = line % 8;
         for (auto i = 0; i < 2; i++)
         {
@@ -362,28 +387,17 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             {
                 if (fontSlice & 1)
                 {
-                    *fpsBuffer++ = fgc;
+                    *fpsBuffer++ = fpsfgcolor;
                 }
                 else
                 {
-                    *fpsBuffer++ = bgc;
+                    *fpsBuffer++ = fpsbgcolor;
                 }
                 fontSlice >>= 1;
             }
         }
     }
     dvi_->setLineBuffer(line, b);
-    if (line == (SMS_HEIGHT + SCANLINEOFFSET - 1))
-    {
-        // insert blank lines on bottom
-        for (int bl = line + 1; bl < 236; bl++)
-        {
-            auto blank = dvi_->getLineBuffer();
-            uint16_t *sbuffer = blank->data() + 32;
-            __builtin_memset(sbuffer, 0, 512);
-            dvi_->setLineBuffer(bl, blank);
-        }
-    }
 }
 
 void system_load_sram(void)
@@ -461,6 +475,8 @@ int ProcessAfterFrameIsRendered()
         uint32_t tick_us = time_us() - start_tick_us;
         fps = (1000000 - 1) / tick_us + 1;
         start_tick_us = time_us();
+        fpsString[0] = '0' + (fps / 10);
+        fpsString[1] = '0' + (fps % 10);
     }
     return count;
 }
@@ -619,6 +635,7 @@ int main()
     char errMSG[ERRORMESSAGESIZE];
     errMSG[0] = selectedRom[0] = 0;
     int fileSize = 0;
+    bool isGameGear = false;
     FIL fil;
     FIL fil2;
     FRESULT fr;
@@ -664,6 +681,9 @@ int main()
             {
                 // determine file size
                 selectedRom[r] = 0;
+                isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
+                printf("Current game: %s\n", selectedRom);
+                printf("Console is %s\n", isGameGear ? "Game Gear" : "Master System");
                 printf("Determine filesize of %s\n", selectedRom);
                 fr2 = f_open(&fil2, selectedRom, FA_READ);
                 if (fr2 == FR_OK)
@@ -697,14 +717,13 @@ int main()
         printf("Starting (%d) %s\n", strlen(selectedRom), selectedRom);
         printf("Checking for /START file. (Is start pressed in Menu?)\n");
         fr = f_unlink("/START");
-        // 4kb is how many bytes? 0x1000 = 4096
         if (fr == FR_NO_FILE)
         {
             printf("Start not pressed, flashing rom.\n ");
             // Allocate buffer for flashing. Borrow emulator memory for this.
-            size_t bufsize = 0;  // 0x2000;
-            BYTE *buffer =   getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
-            
+            size_t bufsize = 0;                                 // 0x2000;
+            BYTE *buffer = getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
             printf("write %s rom to flash %x\n", selectedRom, ofs);
             fr = f_open(&fil, selectedRom, FA_READ);
@@ -767,7 +786,7 @@ int main()
                 printf("%s\n", ErrorMessage);
                 selectedRom[0] = 0;
             }
-            //free(buffer);
+            // free(buffer);
         }
         else
         {
@@ -796,8 +815,9 @@ int main()
     dvi_->allocateAudioBuffer(256);
     //    dvi_->setExclusiveProc(&exclProc_);
 
-    dvi_->getBlankSettings().top = 4 * 2;
-    dvi_->getBlankSettings().bottom = 4 * 2;
+    // Adjust the top and bottom to center the emulator screen
+    dvi_->getBlankSettings().top = MARGINTOP * 2;
+    dvi_->getBlankSettings().bottom = MARGINBOTTOM * 2;
     // dvi_->setScanLine(true);
 
     applyScreenMode();
@@ -821,13 +841,16 @@ int main()
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
+            // reset margin to give menu more screen space
+            dvi_->getBlankSettings().top = 4 * 2;
+            dvi_->getBlankSettings().bottom = 4 * 2;
             screenMode_ = ScreenMode::NOSCANLINE_8_7;
             applyScreenMode();
             menu(SMS_FILE_ADDR, ErrorMessage, isFatalError, reset);
         }
         reset = false;
         printf("Now playing: %s\n", selectedRom);
-        load_rom(fileSize);
+        load_rom(fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any

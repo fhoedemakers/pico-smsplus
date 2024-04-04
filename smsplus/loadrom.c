@@ -95,7 +95,7 @@ typedef struct
 
 //     return 1;
 // }
-int load_rom(int size)
+int load_rom(int size, bool isGameGear)
 {
     uint8_t *start = (uint8_t *)SMS_FILE_ADDR;
     sms.use_fm = 0;
@@ -109,7 +109,7 @@ int load_rom(int size)
     bitmap.depth = 8;
     cart.rom = start;
     cart.pages = (size / 0x4000);
-    cart.type = TYPE_SMS;
+    cart.type = isGameGear ? TYPE_GG : TYPE_SMS;
     return 1;
 }
 

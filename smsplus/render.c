@@ -289,8 +289,11 @@ extern void sms_render_line(int line, const uint8_t *buffer);
 void in_ram(render_line)(int line)
 {
     /* Ensure we're within the viewport range */
-    if ((line < vp_vstart) || (line >= vp_vend))
+    if ((line < vp_vstart) || (line >= vp_vend)) {
+        // Hack to render emulator display center correctly vertically by drawing black lines on top and bottom.
+        sms_render_line(line, 0);
         return;
+    }
 
     /* Point to current line in output buffer */
     // linebuf = &bitmap.data[(line * bitmap.pitch)];
