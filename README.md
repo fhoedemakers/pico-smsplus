@@ -13,6 +13,9 @@ Put your Master System (.sms) and Game Gear (.gg) rom files on a FAT32 formatted
 ## System requirements - What do yo need?
 
 The binary specific for your config can be downloaded from the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
+
+You need a FAT32 formatted SD card to put your .sms and .gg roms on.
+
 ## For Raspberry Pi Pico / Pico W
 
 - Raspberry Pi Pico and [Pimoroni Pico DV Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-dv-demo-base?variant=39494203998291)
