@@ -62,10 +62,11 @@ static char fpsString[3] = "00";
 #define fpsfgcolor 0;     // black
 #define fpsbgcolor 0xFFF; // white
 
-#define SCANLINEOFFSET 25
-#define FPSSTART (((SCANLINEOFFSET + 7) / 8) * 8)
+#define MARGINTOP 24
+#define MARGINBOTTOM 4
+
+#define FPSSTART (((MARGINTOP + 7) / 8) * 8)
 #define FPSEND ((FPSSTART) + 8)
-static int firstscanline = 0;
 
 bool reset = false;
 
@@ -304,13 +305,10 @@ uint32_t time_us()
 extern "C" void in_ram(sms_palette_syncGG)(int index)
 {
     // The GG has a different palette format
-    // TODO: Implement
     int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
     int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
     int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
-    // print values
-    // printf("index: %d, r: %d, g: %d, b: %d\n", index, r, g, b);
-
+   
     int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
     int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
     int b444 = ((b << 4) + 127) >> 8;
@@ -319,44 +317,48 @@ extern "C" void in_ram(sms_palette_syncGG)(int index)
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
-
+#if 1
     // Get SMS palette color index from CRAM
     WORD r = ((vdp.cram[index] >> 0) & 3);
     WORD g = ((vdp.cram[index] >> 2) & 3);
     WORD b = ((vdp.cram[index] >> 4) & 3);
     WORD tableIndex = b << 4 | g << 2 | r;
-    // Get the RGB444 color from the SMS palette
+    // Get the RGB444 color from the SMS RGB444 palette
     palette444[index] = SMSPaletteRGB444[tableIndex];
+#endif 
+
+#if 0
+    // Alternative color rendering below
+    WORD r = ((vdp.cram[index] >> 0) & 3) << 6;
+    WORD g = ((vdp.cram[index] >> 2) & 3) << 6;
+    WORD b = ((vdp.cram[index] >> 4) & 3) << 6;
+    int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
+    int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
+    int b444 = ((b << 4) + 127) >> 8;
+    palette444[index] = (r444 << 8) | (g444 << 4) | b444;
+#endif
     return;
 }
 
 extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 {
-    // DVI screen line 0 - 3 do not use
-    // DVI screen Line 4 - 235 are the visible screen
+    // DVI top margin has #MARGINTOP lines
+    // DVI bottom margin has #MARGINBOTTOM lines
+    // DVI usable screen estate: MARGINTOP .. (240 - #MARGINBOTTOM)
     // SMS has 192 lines
     // GG  has 144 lines
+    // gg : Line starts at line 24
+    // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
     // Audio needs to be processed per scanline
-    // gg : Line starts at 24
-    // sms: Line starts at 0
-    processaudio(line);
-    line += 4;
-    // line += SCANLINEOFFSET;
-    if (line < 4 || line >= 236) // 236
-        return;
-    // if (line == firstscanline)
-    // {
-    //     // insert blank lines on top
 
-    //     for (int bl = 4; bl < line; bl++)
-    //     {
-    //         auto blank = dvi_->getLineBuffer();
-    //         uint16_t *sbuffer = blank->data() + 32;
-    //         __builtin_memset(sbuffer, 0, 512);
-    //         dvi_->setLineBuffer(bl, blank);
-    //     }
-    // }
+    processaudio(line);
+    // Adjust line number to center the emulator display
+    line += MARGINTOP;
+    // Only render lines that are visible on the screen, keeping into account top and bottom margins
+    if (line < MARGINTOP || line >= 240 - MARGINBOTTOM)
+        return;
+
     auto b = dvi_->getLineBuffer();
     uint16_t *sbuffer;
     if (buffer)
@@ -366,7 +368,9 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         {
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
-    } else {
+    }
+    else
+    {
         sbuffer = b->data() + 32;
         __builtin_memset(sbuffer, 0, 512);
     }
@@ -394,20 +398,6 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         }
     }
     dvi_->setLineBuffer(line, b);
-    // if (line == (SMS_HEIGHT + SCANLINEOFFSET - BMP_Y_OFFSET - 1))
-    // {
-    //     // insert blank lines on bottom
-    //     // > 228 makes screen flicker on GG
-    //     int lastline = IS_GG ? 228 : 236;
-    //     for (int bl = line + 1; bl < lastline; bl++)
-    //     //for (int bl = line + 1; bl < 228; bl++)
-    //     {
-    //         auto blank = dvi_->getLineBuffer();
-    //         uint16_t *sbuffer = blank->data() + 32;
-    //         __builtin_memset(sbuffer, 0, 512);
-    //         dvi_->setLineBuffer(bl, blank);
-    //     }
-    // }
 }
 
 void system_load_sram(void)
@@ -727,7 +717,6 @@ int main()
         printf("Starting (%d) %s\n", strlen(selectedRom), selectedRom);
         printf("Checking for /START file. (Is start pressed in Menu?)\n");
         fr = f_unlink("/START");
-        // 4kb is how many bytes? 0x1000 = 4096
         if (fr == FR_NO_FILE)
         {
             printf("Start not pressed, flashing rom.\n ");
@@ -826,8 +815,9 @@ int main()
     dvi_->allocateAudioBuffer(256);
     //    dvi_->setExclusiveProc(&exclProc_);
 
-    dvi_->getBlankSettings().top = 4 * 2;
-    dvi_->getBlankSettings().bottom = 4 * 2;
+    // Adjust the top and bottom to center the emulator screen
+    dvi_->getBlankSettings().top = MARGINTOP * 2;
+    dvi_->getBlankSettings().bottom = MARGINBOTTOM * 2;
     // dvi_->setScanLine(true);
 
     applyScreenMode();
@@ -851,6 +841,9 @@ int main()
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
+            // reset margin to give menu more screen space
+            dvi_->getBlankSettings().top = 4 * 2;
+            dvi_->getBlankSettings().bottom = 4 * 2;
             screenMode_ = ScreenMode::NOSCANLINE_8_7;
             applyScreenMode();
             menu(SMS_FILE_ADDR, ErrorMessage, isFatalError, reset);
@@ -858,7 +851,6 @@ int main()
         reset = false;
         printf("Now playing: %s\n", selectedRom);
         load_rom(fileSize, isGameGear);
-        firstscanline = (SCANLINEOFFSET + BMP_Y_OFFSET);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any

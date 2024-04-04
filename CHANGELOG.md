@@ -13,6 +13,17 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.4
+
+### Features
+
+- [Game Gear roms can now be played (issue #7).](https://github.com/fhoedemakers/pico-smsplus/issues/7)
+
+### Fixes
+
+- Using DVI functions to properly set top and bottom margins, so emulator display is more or less centered on screen.
+
+
 ## v0.3
 
 ### Features
