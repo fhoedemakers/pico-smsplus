@@ -75,4 +75,4 @@ The _debug.sh scripts can be use to create a debug build for each system.
 
 - [ ] Improve performance
 - [ ] Save states
-- [ ] Game Gear support
+
