@@ -13,6 +13,15 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.5
+
+### Features
+
+- Display program version on lower right corber of the menu screen.
+
+### Fixes
+
+
 ## v0.4
 
 ### Features
