@@ -630,7 +630,7 @@ void in_ram(process)(void)
 /// @return
 int main()
 {
-    char selectedRom[128];
+    char selectedRom[FF_MAX_LFN];
     romName = selectedRom;
     char errMSG[ERRORMESSAGESIZE];
     errMSG[0] = selectedRom[0] = 0;
