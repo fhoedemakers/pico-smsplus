@@ -76,12 +76,14 @@ void in_ram(vramMarkTileDirty)(int index)
     }
 }
 
+
 uint8 *in_ram(getCache)(int tile, int attr)
 {
     int n, i, x, y, c;
     int b0, b1, b2, b3;
     int i0, i1, i2, i3;
     int p;
+    static bool isoverFlowed = false;
     // See if we have this in cache.
     if (cachePtr[tile + (attr << 9)] != -1)
         return &cacheStore[cachePtr[tile + (attr << 9)]];
@@ -102,7 +104,11 @@ uint8 *in_ram(getCache)(int tile, int attr)
 
         if (n == CACHEDTILES)
         {
-            printf("Eek, tile cache overflow\n");
+            // Print only once
+            if ( ! isoverFlowed ) {
+                printf("Eek, tile cache overflow\n");
+                isoverFlowed = true;
+            }
             // Crap, out of cache. Kill a tile.
             vramMarkTileDirty(cacheKillPtr++);
             if (cacheKillPtr >= 512)
