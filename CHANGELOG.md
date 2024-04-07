@@ -13,6 +13,16 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.5
+
+### Features
+
+- Display program version on lower right corber of the menu screen.
+
+### Fixes
+
+- Fix memory overflow that causes sound corruption [(issue #6)](https://github.com/fhoedemakers/pico-smsplus/issues/6).
+
 ## v0.4
 
 ### Features
