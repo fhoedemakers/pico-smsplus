@@ -21,6 +21,7 @@ Binaries are at the end of this page.
 
 ### Fixes
 
+- Fix memory overflow that causes sound corruption [(issue #6)](https://github.com/fhoedemakers/pico-smsplus/issues/6).
 
 ## v0.4
 

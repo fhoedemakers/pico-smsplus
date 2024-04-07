@@ -27,7 +27,7 @@ permissions:
 # To avoid sound corruption when building with ubuntu-latest (22.04), build with ubuntu-20.04 (Issue #6)
 jobs:
     build-release:
-        runs-on: ubuntu-20.04
+        runs-on: ubuntu-latest
         name: Build and create release
         steps:
           
