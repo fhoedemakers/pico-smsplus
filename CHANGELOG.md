@@ -22,6 +22,8 @@ Binaries are at the end of this page.
 ### Fixes
 
 - Fix memory overflow that causes sound corruption [(issue #6)](https://github.com/fhoedemakers/pico-smsplus/issues/6).
+- Variabele which contained the path for the rom to flash was too short in main.cpp.
+- When tile overflow occurs, suppress multiple consecutive printf's to console screen to minimize screen flickering. (Prince of Persia)
 
 ## v0.4
 
