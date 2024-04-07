@@ -8,7 +8,9 @@ Put your Master System (.sms) and Game Gear (.gg) rom files on a FAT32 formatted
 
 ## Work in progress
 
-**This is a work in progress, and there are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner). There is some occasionally red flashing between screens.**
+**This is a work in progress, and there are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner).**
+
+> **WARNING** Some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
 
 ## System requirements - What do yo need?
 
