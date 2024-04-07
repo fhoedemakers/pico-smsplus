@@ -17,11 +17,16 @@ static uint8_t smsBufferLine[SMS_WIDTH];
 // FH - 2019-06-30: Added support for RGB444 in stead of RGB565
 static int palette444[32];
 
-static uint8_t sram[0x8000];
+#define SRAMSIZE 0x8000
+#define SRAMSIZEBYTES ( 0x8000 * sizeof(uint8) )
+#define RAMSIZE  0x2000
+#define RAMSIZEBYTES  (0x2000 * sizeof(uint8))
+
+static uint8 sram[SRAMSIZE];
 /* SMS context */
 typedef struct {
     uint8 *dummy; //JMD: Point this into outher space plz.
-    uint8 ram[0x2000];
+    uint8 ram[RAMSIZE];
 //    uint8 sram[0x8000];
     uint8 *sram;
     uint8 fcr[4];
