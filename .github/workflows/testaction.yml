@@ -21,5 +21,9 @@ jobs:
           - name: misc tests
             run: |
                  arm-none-eabi-gcc --version
+                 id -u
+                 export PICO_SDK_PATH="$HOME/pico-sdk"
+                 echo "$PICO_SDK_PATH"
+                 ls -l
                  echo "$PICO_SDK_PATH"
               
