@@ -31,4 +31,6 @@ jobs:
                  echo "$PICO_SDK_PATH"
                  ls -l
                  echo "$PICO_SDK_PATH"
+                 chmod +x build*.sh
+                 ./buildAll.sh
               
