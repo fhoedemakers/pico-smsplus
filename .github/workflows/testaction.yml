@@ -18,7 +18,7 @@ jobs:
           #       sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libusb-1.0-0-dev                            
 
           - name: Check out this repository with submodules
-            uses: actions/checkout@v2
+            uses: actions/checkout@v4
             with:
               submodules: recursive
           
