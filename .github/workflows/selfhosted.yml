@@ -1,3 +1,5 @@
+name: Build using selfhosted runner
+
 on:
     workflow_dispatch:
 
