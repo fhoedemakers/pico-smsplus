@@ -1,6 +1,10 @@
 on:
     workflow_dispatch:
-        
+    
+# Allow this workflow to write back to the repository
+permissions:
+    contents: write
+    
 jobs:
     build-release:
         runs-on: self-hosted
@@ -13,15 +17,16 @@ jobs:
           #       sudo apt install -y git python3 && \
           #       sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libusb-1.0-0-dev                            
 
-          # - name: Check out this repository with submodules
-          #   uses: actions/checkout@v2
-          #   with:
-          #       submodules: recursive
+          - name: Check out this repository with submodules
+            uses: actions/checkout@v2
+            with:
+              submodules: recursive
           
           - name: misc tests
             run: |
                  arm-none-eabi-gcc --version
-                 id -u
+                 id
+                 pwd
                  export PICO_SDK_PATH="$HOME/pico-sdk"
                  echo "$PICO_SDK_PATH"
                  ls -l
