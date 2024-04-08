@@ -14,7 +14,7 @@ permissions:
 jobs:
     build-release:
         runs-on: self-hosted
-        name: test action
+        name: Build using self-hosted runner
         steps:             
         
           #- name: Install dependencies
