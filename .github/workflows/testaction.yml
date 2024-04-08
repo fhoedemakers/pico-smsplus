@@ -1,5 +1,9 @@
 on:
     workflow_dispatch:
+
+# Must match the project() name in CMakeLists.txt
+env:
+    APP_NAME: picosmsPlus
     
 # Allow this workflow to write back to the repository
 permissions:
@@ -22,7 +26,7 @@ jobs:
             with:
               submodules: recursive
           
-          - name: misc tests
+          - name: build source tree
             run: |
                  arm-none-eabi-gcc --version
                  id
@@ -34,3 +38,13 @@ jobs:
                  chmod +x build*.sh
                  ./buildAll.sh
               
+          - name: Show release info using picotool
+            run: |
+                 export PICO_SDK_PATH=$HOME/pico-sdk
+                 $HOME/picotool/build/picotool info releases/${{ env.APP_NAME }}AdaFruitDVISD.uf2
+                 echo "-----------------------------"
+                 $HOME/picotool/build/picotool info releases/${{ env.APP_NAME }}FeatherDVI.uf2
+                 echo "-----------------------------"
+                 $HOME/picotool/build/picotool info releases/${{ env.APP_NAME }}PimoroniDV.uf2
+                 echo "-----------------------------"
+                 $HOME/picotool/build/picotool info releases/${{ env.APP_NAME }}WsRP2040PiZero.uf2 
