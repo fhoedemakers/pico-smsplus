@@ -25,7 +25,25 @@ jobs:
             uses: actions/checkout@v4
             with:
               submodules: recursive
-          
+              
+          - name: Update line containing pico_set_program_version() in CMakelists.txt with tag name.
+            run: |
+                 # Extract the tag name that triggered the event and remove the 'refs/tags/' prefix
+                 input_string=${{ github.ref }}
+                 prefix="refs/tags/"
+                 tag="No versioninfo found"
+                 if [[ $input_string == $prefix* ]]; then
+                      echo "The string starts with 'refs/tags/'."
+                      tag="${input_string#$prefix}"     
+                      echo "Tag is ${tag}"
+                      sed -i "s/^[[:space:]]*pico_set_program_version(.*/pico_set_program_version(${{ env.APP_NAME }} \"$tag\")/" CMakeLists.txt
+                      sed -i "s/VX.X/$tag/" menu.h  
+                 else
+                      echo "The string does not start with 'refs/tags/'."
+                 fi
+                 grep "pico_set_program_version" CMakeLists.txt
+                 grep SWVERSION menu.h        
+                 
           - name: build source tree
             run: |
                  arm-none-eabi-gcc --version
