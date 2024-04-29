@@ -95,7 +95,7 @@ jobs:
                  $HOME/picotool/build/picotool info releases/${{ env.APP_NAME }}WsRP2040PiZero.uf2 
 
           - name: Create release
-            uses: softprops/action-gh-release@v1
+            uses: softprops/action-gh-release@v2
             if: startsWith(github.ref, 'refs/tags/')
             with:
                 files: |
