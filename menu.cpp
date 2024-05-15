@@ -34,6 +34,8 @@ extern std::unique_ptr<dvi::DVI> dvi_;
 void screenMode(int incr);
 extern WORD SMSPaletteRGB444[];
 
+Frens::RomLister *romlister2;
+
 #define CBLACK 0
 #define CWHITE 0x3f
 #define CRED 3
@@ -378,6 +380,8 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     size_t bufsize;
     dirbuffer = (BYTE *) getcachestorefromemulator(&bufsize);
     Frens::RomLister romlister(dirbuffer, bufsize);
+    romlister2 = &romlister;
+
     clearinput();
     if (strlen(errorMessage) > 0)
     {
@@ -398,7 +402,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
             showSplashScreen();
         } else sleep_ms(300);
     }
-    romlister.list("/");
+    exclProc_.setProcAndWait([] { romlister2->list("/"); });
     displayRoms(romlister, firstVisibleRowINDEX);
     while (1)
     {
@@ -497,7 +501,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
                 }
                 if (strcmp(currentDir, "/") != 0)
                 {
-                    romlister.list("..");
+                    exclProc_.setProcAndWait([] { romlister2->list(".."); });
                     firstVisibleRowINDEX = 0;
                     selectedRow = STARTROW;
                     displayRoms(romlister, firstVisibleRowINDEX);
@@ -532,7 +536,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
             {
                 if (entries[index].IsDirectory)
                 {
-                    romlister.list(selectedRomOrFolder);
+                    exclProc_.setProcAndWait([] {romlister2->list(selectedRomOrFolder); });
                     firstVisibleRowINDEX = 0;
                     selectedRow = STARTROW;
                     displayRoms(romlister, firstVisibleRowINDEX);
