@@ -15,6 +15,7 @@
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
 #include "hardware/watchdog.h"
+#include "hardware/pio.h"
 #include <hardware/sync.h>
 #include <pico/multicore.h>
 #include <hardware/flash.h>
@@ -308,7 +309,7 @@ extern "C" void in_ram(sms_palette_syncGG)(int index)
     int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
     int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
     int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
-   
+
     int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
     int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
     int b444 = ((b << 4) + 127) >> 8;
@@ -325,7 +326,7 @@ extern "C" void in_ram(sms_palette_sync)(int index)
     WORD tableIndex = b << 4 | g << 2 | r;
     // Get the RGB444 color from the SMS RGB444 palette
     palette444[index] = SMSPaletteRGB444[tableIndex];
-#endif 
+#endif
 
 #if 0
     // Alternative color rendering below
@@ -523,27 +524,27 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
             (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
             0;
+#if NES_PIN_CLK != -1
+        nespadbuttons = nespad_states[i];
+#endif
         if (i == 0)
         {
-#if NES_PIN_CLK != -1
-            nespadbuttons = nespad_state;
-#endif
-
 #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
             nespadbuttons |= wiipad_read();
 #endif
-            if (nespadbuttons > 0)
-            {
-                smsbuttons |= ((nespadbuttons & NESPAD_UP ? INPUT_UP : 0) |
-                               (nespadbuttons & NESPAD_DOWN ? INPUT_DOWN : 0) |
-                               (nespadbuttons & NESPAD_LEFT ? INPUT_LEFT : 0) |
-                               (nespadbuttons & NESPAD_RIGHT ? INPUT_RIGHT : 0) |
-                               (nespadbuttons & NESPAD_A ? INPUT_BUTTON1 : 0) |
-                               (nespadbuttons & NESPAD_B ? INPUT_BUTTON2 : 0) | 0);
-                smssystem[i] |= ((nespadbuttons & NESPAD_SELECT ? INPUT_PAUSE : 0) |
-                                 (nespadbuttons & NESPAD_START ? INPUT_START : 0) | 0);
-            }
         }
+        if (nespadbuttons > 0)
+        {
+            smsbuttons |= ((nespadbuttons & NESPAD_UP ? INPUT_UP : 0) |
+                           (nespadbuttons & NESPAD_DOWN ? INPUT_DOWN : 0) |
+                           (nespadbuttons & NESPAD_LEFT ? INPUT_LEFT : 0) |
+                           (nespadbuttons & NESPAD_RIGHT ? INPUT_RIGHT : 0) |
+                           (nespadbuttons & NESPAD_A ? INPUT_BUTTON1 : 0) |
+                           (nespadbuttons & NESPAD_B ? INPUT_BUTTON2 : 0) | 0);
+            smssystem[i] |= ((nespadbuttons & NESPAD_SELECT ? INPUT_PAUSE : 0) |
+                             (nespadbuttons & NESPAD_START ? INPUT_START : 0) | 0);
+        }
+
         // if (gp.buttons & io::GamePadState::Button::SELECT) printf("SELECT\n");
         // if (gp.buttons & io::GamePadState::Button::START) printf("START\n");
         input.pad[i] = smsbuttons;
@@ -822,7 +823,10 @@ int main()
 
     applyScreenMode();
 #if NES_PIN_CLK != -1
-    nespad_begin(CPUFreqKHz, NES_PIN_CLK, NES_PIN_DATA, NES_PIN_LAT);
+    nespad_begin(0, CPUFreqKHz, NES_PIN_CLK, NES_PIN_DATA, NES_PIN_LAT, NES_PIO);
+#endif
+#if NES_PIN_CLK_1 != -1
+    nespad_begin(1, CPUFreqKHz, NES_PIN_CLK_1, NES_PIN_DATA_1, NES_PIN_LAT_1, NES_PIO_1);
 #endif
 #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
     wiipad_begin();
