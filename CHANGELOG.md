@@ -11,6 +11,8 @@ Binaries are at the end of this page.
 - picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base
 - picosmsPlusWsRP2040PiZero.uf2: Waveshare RP2040-Pizero
 
+For detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+
 # Release notes
 
 ## v0.6
