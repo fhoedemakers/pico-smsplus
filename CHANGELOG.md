@@ -19,7 +19,12 @@ Binaries are at the end of this page.
 
 - Two player games can now be played. An extra NES controller port can be added to any configuration. Controller port 1 can be a USB or NES controller, controller 2 must be a NES controller. At the moment, no second USB controller can be connected.
 
-Technical changes:
+
+### Fixes
+
+- Fixed some compiler errors when building with recent versions of gcc.
+  
+### Technical changes:
 
 - Pimoroni Pico DV Demo Base: uart output fore debug printf messages is disabled, because gpio1 is needed for the second NES controller port.
 
