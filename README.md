@@ -6,7 +6,7 @@ The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](htt
 
 Put your Master System (.sms) and Game Gear (.gg) rom files on a FAT32 formatted SD card. You can organize the roms in directories. A menu is displayed on which you can select the rom to play.
 
-Supports two controllers for two player games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
+Master System supports two controllers for two player games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
 
 ***
 
