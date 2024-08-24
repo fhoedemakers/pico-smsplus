@@ -20,19 +20,19 @@ Click on image below to see a demo video.
 
 **This is a work in progress, and there are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner).**
 
->[!WARN] 
+>[!WARNING] 
 > Some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
 
 *** 
 
-## System requirements - What do yo need?
+## System requirements and setup - What do yo need?
 
 The binary specific for your config can be downloaded from the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
 
 You need a FAT32 formatted SD card to put your .sms and .gg roms on.
 
 >[!NOTE]
-> For more detailed instructions and specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus). (For using a breadboard with components or how to use an Original NES or WII-classic controller.)
+> For more detailed instructions and specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
 
 *** 
 
