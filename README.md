@@ -68,7 +68,7 @@ Also original NES and WII-classic controllers are supported in some configuratio
 
 ## About two player games
 
-The emulator supports two player games using two NES controllers or an USB gamecontroller and a NES controller connected to controller port of player 2. The USB controller is always player 1.
+The emulator supports two player Master System games using two NES controllers or an USB gamecontroller and a NES controller connected to controller port of player 2. The USB controller is always player 1.
 
 > [!NOTE]
 > You cannot use two USB controllers for two player mode.
