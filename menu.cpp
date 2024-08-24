@@ -283,6 +283,7 @@ void showSplashScreen()
         }
         DrawScreen(-1);
         processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
+        PAD1_Latch |= PAD1_Latch2;
         if (PAD1_Latch > 0 || (frameCount - startFrame) > 1000)
         {
              return;
@@ -410,7 +411,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
         errorInSavingRom = false;
         DrawScreen(selectedRow);
         processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
-
+        PAD1_Latch |= PAD1_Latch2;
         if (PAD1_Latch > 0 || pdwSystem > 0)
         {
             totalFrames = frameCount; // Reset screenSaver

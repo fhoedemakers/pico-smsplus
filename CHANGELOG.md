@@ -11,7 +11,25 @@ Binaries are at the end of this page.
 - picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base
 - picosmsPlusWsRP2040PiZero.uf2: Waveshare RP2040-Pizero
 
+For detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+
 # Release notes
+
+## v0.6
+
+### Features
+
+- Two player games can now be played. An extra NES controller port can be added to any configuration. Controller port 1 can be a USB or NES controller, controller 2 must be a NES controller. At the moment, no second USB controller can be connected.
+
+
+### Fixes
+
+- Fixed some compiler errors when building with recent versions of gcc.
+  
+### Technical changes:
+
+- Pimoroni Pico DV Demo Base: uart output fore debug printf messages is disabled, because gpio1 is needed for the second NES controller port.
+
 
 ## v0.5
 
