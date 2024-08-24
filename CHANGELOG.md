@@ -4,14 +4,14 @@
 
 Binaries are at the end of this page.
 
-[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus)
+[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
 
 - picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config
 - picosmsPlusFeatherDVI.uf2: Adafruit Feather DVI
 - picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base
 - picosmsPlusWsRP2040PiZero.uf2: Waveshare RP2040-Pizero
 
-For detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+
 
 # Release notes
 
