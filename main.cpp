@@ -507,11 +507,16 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 
     int smssystem[2]{};
     unsigned long pushed, pushedsystem, pushedother;
+    bool usbConnected = false;
     for (int i = 0; i < 2; i++)
     {
         int nespadbuttons = 0;
         auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
+         if ( i == 0 )
+        {
+            usbConnected = gp.isConnected();
+        }
         int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
                          (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
                          (gp.buttons & io::GamePadState::Button::UP ? INPUT_UP : 0) |
@@ -524,15 +529,38 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             (gp.buttons & io::GamePadState::Button::SELECT ? INPUT_PAUSE : 0) |
             (gp.buttons & io::GamePadState::Button::START ? INPUT_START : 0) |
             0;
+
 #if NES_PIN_CLK != -1
-        nespadbuttons = nespad_states[i];
-#endif
-        if (i == 0)
-        {
-#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
-            nespadbuttons |= wiipad_read();
-#endif
+        // When USB controller is connected both NES ports act as controller 2
+        if (usbConnected)
+        {          
+            if (i == 1)
+            {
+                 nespadbuttons= nespadbuttons | nespad_states[1] | nespad_states[0];
+            }
         }
+        else
+        {
+            nespadbuttons |= nespad_states[i];
+        }
+#endif
+// When USB controller is connected  wiipad acts as controller 2 
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+        if (usbConnected)
+        {
+            if (i == 1)
+            {
+                nespadbuttons |= wiipad_read();
+            }
+        }
+        else // if no USB controller is connected, wiipad acts as controller 1
+        {
+            if (i == 0)
+            {
+                nespadbuttons |= wiipad_read();
+            }
+        }
+#endif
         if (nespadbuttons > 0)
         {
             smsbuttons |= ((nespadbuttons & NESPAD_UP ? INPUT_UP : 0) |
