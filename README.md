@@ -16,9 +16,9 @@ Click on image below to see a demo video.
 [![Video](https://img.youtube.com/vi/__E8h2Ay3g8/0.jpg)](https://www.youtube.com/watch?v=__E8h2Ay3g8)
 
 ***
-## Work in progress
+## Not perfect
 
-**This is a work in progress, and there are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner).**
+**There are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner).**
 
 >[!WARNING] 
 > Some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
@@ -68,12 +68,17 @@ Also original NES and WII-classic controllers are supported in some configuratio
 
 ## About two player games
 
-The emulator supports two player Master System games using two NES controllers or an USB gamecontroller and a NES controller connected to controller port of player 2. The USB controller is always player 1.
+The emulator supports two player games using two NES controllers or an USB gamecontroller and a NES controller.
 
 > [!NOTE]
-> You cannot use two USB controllers for two player mode.
->  At the moment only one USB controller is recognized by the driver.
-> The second controller must be a NES controller. In this config the NES controller port must be wired up to the GPIO pins of player 2. See configurations below.
+> You cannot use two USB controllers for two player games.
+> At the moment only one USB controller is recognized by the driver. In this case the USB controller is always player 1. Player 2 must be a NES controller.
+
+
+| | Player 1 | Player 2 |
+| --- | -------- | -------- |
+| USB controller connected | USB | NES port 1 or NES port 2 |
+| No usb controller connected | NES port 1| NES port 2 |
 
 ***
 

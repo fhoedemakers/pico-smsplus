@@ -15,6 +15,27 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.7
+
+### Features
+
+For two player games. When a USB controller is connected, you can connect a NES controller to either Port 1 or Port 2.  
+The USB controller is always player 1, the NES controller on Port 1 or Port 2 is player 2. 
+In this situation you don't need an extra NES controller port wired for port 2 for playing two player games. The controller connected to port 1 can then be used for player two.
+
+When no USB controller is connected. You can use two NES controllers for two player games. Port 1 is player 1, Port 2 is Player 2.
+
+| | Player 1 | Player 2 |
+| --- | -------- | -------- |
+| USB controller connected | USB | NES port 1 or NES port 2 |
+| No usb controller connected | NES port 1| NES port 2 |
+
+Updated README for two player setup.
+
+### Fixes
+
+- none
+  
 ## v0.6
 
 ### Features
