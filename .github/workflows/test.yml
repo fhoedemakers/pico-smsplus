@@ -4,11 +4,12 @@ name: Build and create a release when tag is pushed
 # git tag v0.n
 # git push origin v0.n 
 on:
-    push:
-        tags:
-          - "v*.*-alpha"
-          - "v*.*.*"
-          - "v*.*"
+  workflow_dispatch:
+    # push:
+    #     tags:
+    #       - "v*.*-alpha"
+    #       - "v*.*.*"
+    #       - "v*.*"
     #     branches: [ main ]
     # pull_request:
     #     branches: [ main ] 

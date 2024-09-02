@@ -32,7 +32,7 @@ extern "C" {
 
 #ifndef in_ram
 #ifdef PICO_BOARD
-#include <pico/platform.h>
+#include <pico.h>
 #define in_ram __not_in_flash_func
 #else
 #define in_ram
