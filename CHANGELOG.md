@@ -15,6 +15,20 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.8
+
+### Features
+
+- none
+
+### Fixes
+
+- none
+
+### Technical changes
+
+- Executables are built with Pico SDK 2.0.0
+
 ## v0.7
 
 ### Features
