@@ -141,7 +141,7 @@ pico_set_program_version(${projectname} "0.1")
 
 # disable uart output for Pimoronis Pico DV Demo Base, as gpio 1 is used for NES controller
 # so debug messages will not be visible on the serial console.
-if ( INFONES_PLUS_HW_CONFIG EQUAL 1 )
+if ( SMSPLUS_HW_CONFIG EQUAL 1 )
     message("Disabling UART output for Pimoroni Pico DV Demo Base")
     pico_enable_stdio_uart(${projectname} 0)
 else()
@@ -154,7 +154,11 @@ set(FAMILY rp2040)
 set(BOARD pico_sdk)
 set(TINYUSB_DEBUG_LEVE 0)
 include(${PICO_TINYUSB_PATH}/hw/bsp/${FAMILY}/family.cmake)
-family_configure_target(${projectname})
+if (PICO_SDK_VERSION_MAJOR LESS 2)
+    family_configure_target(${projectname})
+else()
+    family_configure_target(${projectname} "" )
+endif()
 # add_compile_definitions(CFG_TUSB_DEBUG=0)
 set(SMS_FLAGS -DMB_SMS -DLSB_FIRST=0
         -DSMS_FILE_ADDR=0x10080000 -DNDEBUG
