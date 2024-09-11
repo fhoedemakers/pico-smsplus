@@ -1,7 +1,7 @@
 
 # pico-smsplus
 
-This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System and Game Gear emulator for RP2040 based microcontroller boards like the RaspberryPi Pico. Sound and video are ouput over HDMI.
+This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System and Game Gear emulator for RP2040/RP2350 based microcontroller boards like the RaspberryPi Pico and Pico 2. Sound and video are ouput over HDMI.
 The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](https://github.com/shuichitakano/pico-infones) which in turn is based on [PicoDVI](https://github.com/Wren6991/PicoDVI).
 
 Put your Master System (.sms) and Game Gear (.gg) rom files on a FAT32 formatted SD card. You can organize the roms in directories. A menu is displayed on which you can select the rom to play.
@@ -18,10 +18,11 @@ Click on image below to see a demo video.
 ***
 ## Not perfect
 
-**There are still some issues to be fixed. The emulator runs decently well. Some games may not run at full speed or at all. (afterburner).**
+**There are still some issues to be fixed. The emulator runs decently well, especially on the Pico 2/RP2350. On the Pico/RP2040, Some games may not run at full speed or at all. (afterburner).**
 
 >[!WARNING] 
-> Some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
+> On Pico/RP2040, some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
+> Runs much better on Pico 2/RP2350.
 
 *** 
 
@@ -36,7 +37,7 @@ You need a FAT32 formatted SD card to put your .sms and .gg roms on.
 
 *** 
 
-## For Raspberry Pi Pico / Pico W
+## For Raspberry Pi Pico / Pico W / Pico 2
 
 - Raspberry Pi Pico and [Pimoroni Pico DV Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-dv-demo-base?variant=39494203998291)
 - [Custom Printed Circuit Board](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico)
@@ -50,7 +51,6 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 
 - [Adafruit Feather RP2040 with DVI Output](https://www.adafruit.com/product/5710) and [FeatherWing - RTC + SD](https://www.adafruit.com/product/2922).
 - [Waveshare RP2040-PiZero Development Board](https://www.waveshare.com/rp2040-pizero.htm)
-
 
 
 ***
