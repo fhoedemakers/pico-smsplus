@@ -17,10 +17,10 @@ include(pico_sdk_import.cmake)
 project(${projectname} C CXX ASM)
 pico_sdk_init()
 
-if (NOT SMSPLUS_HW_CONFIG)
-    set(SMSPLUS_HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
+if (NOT HW_CONFIG)
+    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
 endif()
-if ( SMSPLUS_HW_CONFIG EQUAL 1 )
+if ( HW_CONFIG EQUAL 1 )
 	# This default Config is for Pimoroni Pico DV Demo Base
 	set(DVICONFIG "dviConfig_PimoroniDemoDVSock" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
@@ -39,7 +39,7 @@ if ( SMSPLUS_HW_CONFIG EQUAL 1 )
     set(NES_PIO_1 "pio1" CACHE STRING "Select the PIO for second NES controller")
 	set(WII_SDA "-1" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
 	set(WII_SCL "-1" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
-elseif ( SMSPLUS_HW_CONFIG EQUAL 2 )
+elseif ( HW_CONFIG EQUAL 2 )
 	# --------------------------------------------------------------------
 	# Alternate config for use with different SDcard reader and HDMI board
     #  Use also for Printed Circuit Board (PCB) version.
@@ -63,7 +63,7 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 2 )
     set(NES_PIO_1 "pio1" CACHE STRING "Select the PIO for second NES controller")
 	set(WII_SDA "-1" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
 	set(WII_SCL "-1" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
-elseif ( SMSPLUS_HW_CONFIG EQUAL 3 )
+elseif ( HW_CONFIG EQUAL 3 )
 	# --------------------------------------------------------------------
 	# Alternate config for use with Adafruit Feather RP2040 DVI + SD Wing
 	# --------------------------------------------------------------------
@@ -84,7 +84,7 @@ elseif ( SMSPLUS_HW_CONFIG EQUAL 3 )
     set(NES_PIO_1 "pio1" CACHE STRING "Select the PIO for second NES controller")
 	set(WII_SDA "2" CACHE STRING "Select the SDA GPIO pin for Wii Classic controller")
 	set(WII_SCL "3" CACHE STRING "Select the SCL GPIO pin for Wii Classic controller")
-elseif ( SMSPLUS_HW_CONFIG EQUAL 4 )
+elseif ( HW_CONFIG EQUAL 4 )
     # --------------------------------------------------------------------
 	# Alternate config for use with Waveshare RP2040-PiZero
 	# --------------------------------------------------------------------
@@ -141,7 +141,7 @@ pico_set_program_version(${projectname} "0.1")
 
 # disable uart output for Pimoronis Pico DV Demo Base, as gpio 1 is used for NES controller
 # so debug messages will not be visible on the serial console.
-if ( SMSPLUS_HW_CONFIG EQUAL 1 )
+if ( HW_CONFIG EQUAL 1 )
     message("Disabling UART output for Pimoroni Pico DV Demo Base")
     pico_enable_stdio_uart(${projectname} 0)
 else()

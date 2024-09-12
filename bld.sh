@@ -1,8 +1,10 @@
 :
-# Generic build script for the pico-smsPlus project
+# Generic build script for the project
 #
+APP=picosmsPlus
+PROJECT="pico-smsPlus"
 function usage() {
-	echo "Build script for the pico-smsPlus project"
+	echo "Build script for the ${APP} project"
 	echo  ""
 	echo "Usage: $0 [-d] [-2] [-c <hwconfig>]"
 	echo "Options:"
@@ -17,10 +19,11 @@ function usage() {
 	echo "     hwconfig 2 and 3 are RP2040-based boards, so they cannot be built for Pico 2"
 	echo "  -h: display this help"
 } 
+
 PICO_BOARD=pico
 BUILD=RELEASE
 HWCONFIG=1
-UF2="picosmsPlusPimoroniDV.uf2"
+UF2="${APP}PimoroniDV.uf2"
 # check if var PICO_SDK is set and points to the SDK
 if [ -z "$PICO_SDK_PATH" ] ; then
 	echo "PICO_SDK not set. Please set the PICO_SDK environment variable to the location of the Pico SDK"
@@ -66,16 +69,16 @@ done
 
 case $HWCONFIG in
 	1)
-		UF2="picosmsPlusPimoroniDV.uf2"
+		UF2="${APP}PimoroniDV.uf2"
 		;;
 	2)
-		UF2="picosmsPlusAdaFruitDVISD.uf2"
+		UF2="${APP}AdaFruitDVISD.uf2"
 		;;
 	3) 
-		UF2="picosmsPlusFeatherDVI.uf2"
+		UF2="${APP}FeatherDVI.uf2"
 		;;
 	4)
-		UF2="picosmsPlusWsRP2040PiZero.uf2"
+		UF2="${APP}WsRP2040PiZero.uf2"
 		;;
 	*)
 		echo "Invalid value: $HWCONFIG specified for option -c"
@@ -86,10 +89,10 @@ esac
 if [ "$PICO_BOARD" = "pico2" ] ; then
 	UF2="pico2_$UF2"
 fi	
+echo "Building $PROJECT"
 echo "Using Pico SDK version: $SDKVERSION"
 echo "Building for $PICO_BOARD with $BUILD configuration and HWCONFIG=$HWCONFIG"
 echo "UF2 file: $UF2"
-
 if [ $SDKVERSION -lt 2 -a $PICO_BOARD = "pico2" ] ; then
 		echo "Pico SDK version $SDKVERSION does not support Pico 2. Please update the SDK to version 2 or higher"
 		echo ""
@@ -107,11 +110,11 @@ if [ -d build ] ; then
 fi
 mkdir build || exit 1
 cd build || exit 1
-cmake -DCMAKE_BUILD_TYPE=$BUILD -DSMSPLUS_HW_CONFIG=$HWCONFIG -DPICO_BOARD=$PICO_BOARD ..
+cmake -DCMAKE_BUILD_TYPE=$BUILD -DHW_CONFIG=$HWCONFIG -DPICO_BOARD=$PICO_BOARD ..
 make -j 4
 cd ..
 echo ""
-if [ -f build/picosmsPlus.uf2 ] ; then
-	cp build/picosmsPlus.uf2 releases/${UF2} || exit 1
+if [ -f build/${APP}.uf2 ] ; then
+	cp build/${APP}.uf2 releases/${UF2} || exit 1
 fi
 
