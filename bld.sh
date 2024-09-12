@@ -4,7 +4,7 @@
 APP=picosmsPlus
 PROJECT="pico-smsPlus"
 function usage() {
-	echo "Build script for the ${APP} project"
+	echo "Build script for the ${PROJECT} project"
 	echo  ""
 	echo "Usage: $0 [-d] [-2] [-c <hwconfig>]"
 	echo "Options:"
