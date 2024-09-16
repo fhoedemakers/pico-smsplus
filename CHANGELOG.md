@@ -22,6 +22,16 @@ Binaries are at the end of this page.
 
 # Release notes
 
+## v0.11
+
+### Features
+
+Replaced font in menu system with new more readable font. [@biblioeteca](https://github.com/biblioeteca)
+
+### Fixes
+
+- none
+
 ## v0.10
 
 ### Features
