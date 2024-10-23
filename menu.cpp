@@ -23,8 +23,9 @@
 #define SCREEN_COLS 32
 #define SCREEN_ROWS 29
 
-#define STARTROW 2
-#define ENDROW 25
+#define STARTROW 3
+#define ENDROW 24
+
 #define PAGESIZE (ENDROW - STARTROW + 1)
 
 #define VISIBLEPATHSIZE (SCREEN_COLS - 3)
@@ -33,6 +34,8 @@ extern util::ExclusiveProc exclProc_;
 extern std::unique_ptr<dvi::DVI> dvi_;
 void screenMode(int incr);
 extern WORD SMSPaletteRGB444[];
+
+static char connectedGamePadName[sizeof(io::GamePadState::GamePadName)];
 
 #define CBLACK 0
 #define CWHITE 0x3f
@@ -152,6 +155,14 @@ static void putText(int x, int y, const char *text, int fgcolor, int bgcolor)
 
 void DrawScreen(int selectedRow)
 {
+    const char *spaces = "                   ";
+    char tmpstr[sizeof(connectedGamePadName) + 4];
+    if (selectedRow != -1)
+    {
+        putText(SCREEN_COLS / 2 - strlen(spaces) / 2, SCREEN_ROWS - 1, spaces, bgcolor, bgcolor);
+        snprintf(tmpstr,sizeof(tmpstr), "- %s -", connectedGamePadName[0] != 0 ? connectedGamePadName : "No USB GamePad");
+        putText(SCREEN_COLS / 2 - strlen(tmpstr) / 2, SCREEN_ROWS - 1, tmpstr, CBLUE, CWHITE);
+    }
     for (auto line = 4; line < 236; line++)
     {
         drawline(line, selectedRow);
@@ -171,12 +182,25 @@ void ClearScreen(charCell *screenBuffer, int color)
 void displayRoms(Frens::RomLister romlister, int startIndex)
 {
     char buffer[ROMLISTER_MAXPATH + 4];
+    char s[SCREEN_COLS];
     auto y = STARTROW;
     auto entries = romlister.GetEntries();
     ClearScreen(screenBuffer, bgcolor);
-    putText(1, 0, "Choose a rom to play:", fgcolor, bgcolor);
-    putText(1, SCREEN_ROWS - 1, "A: Select, B: Back", fgcolor, bgcolor);
-    putText(SCREEN_COLS - strlen(SWVERSION), SCREEN_ROWS - 1,SWVERSION, fgcolor, bgcolor);
+    strcpy(s, "- Pico-SMSPlus -");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 0, s, fgcolor, bgcolor);  
+    strcpy(s, "Choose a rom to play:");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 1, s, fgcolor, bgcolor);
+    for (int i = 1; i < SCREEN_COLS - 1; i++)
+    {
+        putText(i, STARTROW - 1, "-", fgcolor, bgcolor);
+    }
+    for (int i = 1; i < SCREEN_COLS - 1; i++)
+    {
+        putText(i, ENDROW + 1, "-", fgcolor, bgcolor);
+    }
+    strcpy(s, "A Select, B Back");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, ENDROW + 2, s, fgcolor, bgcolor);
+    putText(SCREEN_COLS - strlen(SWVERSION), SCREEN_ROWS - 1, SWVERSION, fgcolor, bgcolor);
     for (auto index = startIndex; index < romlister.Count(); index++)
     {
         if (y <= ENDROW)
