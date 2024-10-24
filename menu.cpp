@@ -182,11 +182,11 @@ void ClearScreen(charCell *screenBuffer, int color)
 void displayRoms(Frens::RomLister romlister, int startIndex)
 {
     char buffer[ROMLISTER_MAXPATH + 4];
-    char s[SCREEN_COLS];
+    char s[SCREEN_COLS + 1];
     auto y = STARTROW;
     auto entries = romlister.GetEntries();
     ClearScreen(screenBuffer, bgcolor);
-    strcpy(s, "- Pico-SMSPlus -");
+    strcpy(s, "- Pico-SMS+ -");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 0, s, fgcolor, bgcolor);  
     strcpy(s, "Choose a rom to play:");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 1, s, fgcolor, bgcolor);
@@ -208,11 +208,11 @@ void displayRoms(Frens::RomLister romlister, int startIndex)
             auto info = entries[index];
             if (info.IsDirectory)
             {
-                snprintf(buffer, sizeof(buffer), "D %s", info.Path);
+                snprintf(buffer, SCREEN_COLS  - 1, "D %s", info.Path);
             }
             else
             {
-                snprintf(buffer, sizeof(buffer), "R %s", info.Path);
+                snprintf(buffer, SCREEN_COLS - 1, "R %s", info.Path);
             }
 
             putText(1, y, buffer, fgcolor, bgcolor);
@@ -255,7 +255,7 @@ void DisplayEmulatorErrorMessage(char *error)
 void showSplashScreen()
 {
     DWORD PAD1_Latch, PAD1_Latch2, pdwSystem;
-    char s[SCREEN_COLS];
+    char s[SCREEN_COLS + 1];
     ClearScreen(screenBuffer, bgcolor);
 
     strcpy(s, "Pico-");
@@ -274,29 +274,29 @@ void showSplashScreen()
     strcpy(s, "Pico Port");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 9, s, fgcolor, bgcolor);
     strcpy(s, "@frenskefrens");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 10, s, CLIGHTBLUE, bgcolor);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 10, s, CBLUE, bgcolor);
 
     strcpy(s, "DVI Support");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 13, s, fgcolor, bgcolor);
     strcpy(s, "@shuichi_takano");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 14, s, CLIGHTBLUE, bgcolor);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 14, s, CBLUE, bgcolor);
 
     strcpy(s, "(S)NES/WII controller support");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 17, s, fgcolor, bgcolor);
 
     strcpy(s, "@PaintYourDragon @adafruit");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 18, s, CLIGHTBLUE, bgcolor);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 18, s, CBLUE, bgcolor);
 
     strcpy(s, "PCB Design");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 21, s, fgcolor, bgcolor);
 
     strcpy(s, "@johnedgarpark");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 22, s, CLIGHTBLUE, bgcolor);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 22, s, CBLUE, bgcolor);
 
     strcpy(s, "https://github.com/");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 25, s, CLIGHTBLUE, bgcolor);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 25, s, CBLUE, bgcolor);
     strcpy(s, "fhoedemakers/pico-smsplus");
-    putText(1, 26, s, CLIGHTBLUE, bgcolor);
+    putText(1, 26, s, CBLUE, bgcolor);
     int startFrame = -1;
     while (true)
     {
@@ -385,6 +385,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     int firstVisibleRowINDEX = 0;
     int selectedRow = STARTROW;
     char currentDir[FF_MAX_LFN];
+
     int totalFrames = -1;
 
     globalErrorMessage = errorMessage;
@@ -441,7 +442,9 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
             totalFrames = frameCount; // Reset screenSaver
             // reset horizontal scroll of highlighted row
             horzontalScrollIndex = 0;
+           
             putText(3, selectedRow, selectedRomOrFolder, fgcolor, bgcolor);
+            putText(SCREEN_COLS - 1, selectedRow, " ", bgcolor, bgcolor);
 
             // if ((PAD1_Latch & Y) == Y)
             // {
@@ -625,7 +628,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
         {
             if ((frameCount % 30) == 0)
             {
-                if (strlen(selectedRomOrFolder + horzontalScrollIndex) > VISIBLEPATHSIZE)
+                if (strlen(selectedRomOrFolder + horzontalScrollIndex) >= VISIBLEPATHSIZE)
                 {
                     horzontalScrollIndex++;
                 }
@@ -633,7 +636,9 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
                 {
                     horzontalScrollIndex = 0;
                 }
+               
                 putText(3, selectedRow, selectedRomOrFolder + horzontalScrollIndex, fgcolor, bgcolor);
+                putText(SCREEN_COLS - 1, selectedRow, " ", bgcolor, bgcolor);
             }
         }
         if (totalFrames == -1)
