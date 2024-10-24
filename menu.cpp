@@ -244,7 +244,7 @@ void DisplayEmulatorErrorMessage(char *error)
     {
         auto frameCount = ProcessAfterFrameIsRendered();
         DrawScreen(-1);
-        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
+        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false, connectedGamePadName);
         if (PAD1_Latch > 0)
         {
             return;
@@ -306,7 +306,7 @@ void showSplashScreen()
             startFrame = frameCount;
         }
         DrawScreen(-1);
-        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
+        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false, connectedGamePadName);
         PAD1_Latch |= PAD1_Latch2;
         if (PAD1_Latch > 0 || (frameCount - startFrame) > 1000)
         {
@@ -340,7 +340,7 @@ void screenSaver()
     {
         frameCount = ProcessAfterFrameIsRendered();
         DrawScreen(-1);
-        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
+        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false, connectedGamePadName);
 
         if (PAD1_Latch > 0)
         {
@@ -362,7 +362,7 @@ void clearinput()
     {
         ProcessAfterFrameIsRendered();
         DrawScreen(-1);
-        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, true);
+        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, true, connectedGamePadName);
         if (PAD1_Latch == 0)
         {
             break;
@@ -435,7 +435,7 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
         selectedRomOrFolder = (romlister.Count() > 0) ? entries[index].Path : nullptr;
         errorInSavingRom = false;
         DrawScreen(selectedRow);
-        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false);
+        processinput(&PAD1_Latch, &PAD1_Latch2, &pdwSystem, false, connectedGamePadName);
         PAD1_Latch |= PAD1_Latch2;
         if (PAD1_Latch > 0 || pdwSystem > 0)
         {

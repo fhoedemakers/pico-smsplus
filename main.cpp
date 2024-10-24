@@ -500,7 +500,7 @@ static DWORD prevOtherButtons[2]{};
 
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
-void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed)
+void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
@@ -513,9 +513,12 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         int nespadbuttons = 0;
         auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
-         if ( i == 0 )
+        if ( i == 0 )
         {
             usbConnected = gp.isConnected();
+            if (gamepadType) {
+                strcpy(gamepadType, gp.GamePadName);
+            }
         }
         int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
                          (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
@@ -647,7 +650,7 @@ void in_ram(process)(void)
     DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
     while (reset == false)
     {
-        processinput(&pdwPad1, &pdwPad2, &pdwSystem, false);
+        processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
         ProcessAfterFrameIsRendered();
     }
