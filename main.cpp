@@ -500,7 +500,7 @@ static DWORD prevOtherButtons[2]{};
 
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
-void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed)
+void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
@@ -513,9 +513,12 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         int nespadbuttons = 0;
         auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
-         if ( i == 0 )
+        if ( i == 0 )
         {
             usbConnected = gp.isConnected();
+            if (gamepadType) {
+                strcpy(gamepadType, gp.GamePadName);
+            }
         }
         int smsbuttons = (gp.buttons & io::GamePadState::Button::LEFT ? INPUT_LEFT : 0) |
                          (gp.buttons & io::GamePadState::Button::RIGHT ? INPUT_RIGHT : 0) |
@@ -647,7 +650,7 @@ void in_ram(process)(void)
     DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
     while (reset == false)
     {
-        processinput(&pdwPad1, &pdwPad2, &pdwSystem, false);
+        processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
         ProcessAfterFrameIsRendered();
     }
@@ -748,15 +751,20 @@ int main()
         fr = f_unlink("/START");
         if (fr == FR_NO_FILE)
         {
-            printf("Start not pressed, flashing rom.\n ");
+            printf("Start not pressed, flashing rom.\n");
             // Allocate buffer for flashing. Borrow emulator memory for this.
-            size_t bufsize = 0;                                 // 0x2000;
-            BYTE *buffer = getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+            // size_t bufsize = 0;                                 // 0x2000;
+            // BYTE *buffer = getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
+            size_t bufsize = 0x1000;    // Write 4k at a time, larger sizes will increases the risk of making XInput unresponsive. (Still happens sometimes)                              
+            BYTE *buffer = (BYTE *)malloc(bufsize);
 
             auto ofs = SMS_FILE_ADDR - XIP_BASE;
-            printf("write %s rom to flash %x\n", selectedRom, ofs);
+            printf("write rom %s to flash %x\n", selectedRom, ofs);
+            UINT totalBytes = 0;
             fr = f_open(&fil, selectedRom, FA_READ);
-
+#if LED_GPIO_PIN != -1
+            bool onOff = true;
+#endif
             UINT bytesRead;
             if (fr == FR_OK)
             {
@@ -784,19 +792,19 @@ int main()
                             {
                                 break;
                             }
-                            printf("Flashing %d bytes to flash address %x\n", bytesRead, ofs);
-                            printf("  -> Erasing...");
-
+#if LED_GPIO_PIN != -1
+                            gpio_put(LED_GPIO_PIN, onOff);
+                            onOff = !onOff;
+#endif
                             // Disable interupts, erase, flash and enable interrupts
                             uint32_t ints = save_and_disable_interrupts();
                             flash_range_erase(ofs, bufsize);
-                            printf("\n  -> Flashing...");
                             flash_range_program(ofs, buffer, bufsize);
                             restore_interrupts(ints);
-                            //
-
-                            printf("\n");
                             ofs += bufsize;
+                            totalBytes += bytesRead;
+                            // keep the usb stack running
+                            tuh_task();
                         }
                         else
                         {
@@ -808,6 +816,7 @@ int main()
                     }
                 }
                 f_close(&fil);
+                printf("Wrote %d bytes to flash\n", totalBytes);
             }
             else
             {
@@ -815,7 +824,8 @@ int main()
                 printf("%s\n", ErrorMessage);
                 selectedRom[0] = 0;
             }
-            // free(buffer);
+            free(buffer);
+            printf("Flashing done\n");
         }
         else
         {

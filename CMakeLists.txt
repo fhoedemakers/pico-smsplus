@@ -202,6 +202,7 @@ PRIVATE
     tinyusb_host
     dvi
     util
+    xinput_host
 )
 
 target_include_directories(${projectname}
@@ -215,6 +216,7 @@ add_subdirectory(drivers/fatfs)
 add_subdirectory(drivers/sdcard)
 add_subdirectory(pico_lib/dvi)
 add_subdirectory(pico_lib/util)
+add_subdirectory(tusb_xinput xinput_host)
 pico_add_extra_outputs(${projectname})
 
 
