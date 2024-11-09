@@ -56,6 +56,30 @@ XInput driver: https://github.com/Ryzee119/tusb_XInput by [Ryzee119](https://git
 
 For more details, see the [README](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#gamecontroller-support) and [troubleshooting](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#troubleshooting-usb-controllers) section
 
+## v0.12
+
+### Features
+
+- For RP2350, Risc-V binaries can be build and are included in the release. In Risc-V there is one display mode missing because the Risc-V assembly code for that display mode is not implemented. The following Risc-V binaries are included in the release:
+  - pico2_riscv_smsPlusAdaFruitDVISD.uf2
+  - pico2_riscv_smsPlusPimoroniDV.uf2
+- Displays the hardware type in the menu.
+- updated bld.sh and buildAll.sh scripts to include the Risc-V build. For this to work, you need to have the Risc-V toolchain installed. Depending on your development environment you need to download:
+  - Raspberry Pi OS: https://github.com/raspberrypi/pico-sdk-tools/releases/download/v2.0.0-5/riscv-toolchain-14-aarch64-lin.tar.gz
+  - Linux x86/x64: https://github.com/raspberrypi/pico-sdk-tools/releases/download/v2.0.0-5/riscv-toolchain-14-x86_64-lin.tar.gz
+    
+  and extract it to $PICO_SDK_PATH/toolchain/RISCV_RPI_2_0_0_2 (create the directory tree if needed)
+
+  To build run:
+  - ./bld.sh -c1 -r -t $PICO_SDK_PATH/toolchain/RISCV_RPI_2_0_0_2/bin
+  - ./bld.sh -c2 -r -t $PICO_SDK_PATH/toolchain/RISCV_RPI_2_0_0_2/bin
+ 
+  The first command builds a Risc-V binary for the Pimoroni DV Demo base, the second for the PCB or breadboard with Adafruit hardware.
+  
+### Fixes
+
+- Fix in game reset boots back to game in stead of menu.
+
 ## v0.11
 
 ### Features
