@@ -741,7 +741,7 @@ int main()
     }
     // When a game is started from the menu, the menu will reboot the device.
     // After reboot the emulator will start the selected game.
-    if (watchdog_caused_reboot() && isFatalError == false && selectedRom[0] != 0)
+    if (watchdog_enable_caused_reboot() && isFatalError == false && selectedRom[0] != 0)
     {
         // Determine loaded rom
         printf("Rebooted by menu\n");
