@@ -41,7 +41,7 @@ static char connectedGamePadName[sizeof(io::GamePadState::GamePadName)];
 #define CWHITE 0x3f
 #define CRED 3
 #define CGREEN 0x40
-#define CBLUE 0x54
+#define CBLUE 36
 #define CLIGHTBLUE 0x63
 #define DEFAULT_FGCOLOR CBLACK // 60
 #define DEFAULT_BGCOLOR CWHITE
@@ -199,8 +199,10 @@ void displayRoms(Frens::RomLister romlister, int startIndex)
         putText(i, ENDROW + 1, "-", fgcolor, bgcolor);
     }
     strcpy(s, "A Select, B Back");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, ENDROW + 2, s, fgcolor, bgcolor);
+
+    putText(1, ENDROW + 2, s, fgcolor, bgcolor);
     putText(SCREEN_COLS - strlen(SWVERSION), SCREEN_ROWS - 1, SWVERSION, fgcolor, bgcolor);
+    putText(SCREEN_COLS - strlen(PICOHWNAME_) - 1, ENDROW + 2, PICOHWNAME_, fgcolor, bgcolor);
     for (auto index = startIndex; index < romlister.Count(); index++)
     {
         if (y <= ENDROW)
