@@ -41,7 +41,7 @@ static char connectedGamePadName[sizeof(io::GamePadState::GamePadName)];
 #define CWHITE 0x3f
 #define CRED 3
 #define CGREEN 0x40
-#define CBLUE 0x54
+#define CBLUE 36
 #define CLIGHTBLUE 0x63
 #define DEFAULT_FGCOLOR CBLACK // 60
 #define DEFAULT_BGCOLOR CWHITE
