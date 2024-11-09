@@ -18,7 +18,6 @@ Binaries are at the end of this page.
 - pico2_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Arm-s
 - pico2_riscv_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico 2/RP2350 - Risc-V
 - pico2_riscv_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Risc-V
-
 - pico_nesPCB_v2.1.zip: PCB Design. For more info see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus#pcb-with-raspberry-pi-pico-or-pico-2).
 
 3D-printed case design for PCB: [https://www.thingiverse.com/thing:6689537](https://www.thingiverse.com/thing:6689537). 
