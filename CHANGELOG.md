@@ -52,7 +52,7 @@ Because of the shared code, the following features are now available in Pico-SMS
 
 ### Fixes
 
--
+- minor small fixes
 
 
 
