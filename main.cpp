@@ -900,6 +900,7 @@ int main()
         system_reset();
         printf("Starting game\n");
         process();
+        system_shutdown();
         selectedRom[0] = 0;
     }
 
