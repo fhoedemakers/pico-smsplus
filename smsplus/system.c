@@ -30,6 +30,18 @@ struct {
 } ym2413;
 
 void system_init(int rate) {
+
+    // initialize memory
+    cachePtr = (int16 *)malloc(512 * 4 * sizeof(int16));
+    cacheStore = (uint8 *)malloc(CACHEDTILES * 64 * sizeof(uint8));
+    cacheStoreUsed = (uint8 *)malloc(CACHEDTILES * sizeof(uint8));
+    if (!cachePtr || !cacheStore || !cacheStoreUsed) {
+        printf("Failed to allocate memory for cache\n");
+        exit(1);
+    }
+    memset(cachePtr, 0, 512 * 4 * sizeof(int16));
+    memset(cacheStore, 0, CACHEDTILES * 64 * sizeof(uint8));
+    memset(cacheStoreUsed, 0, CACHEDTILES * sizeof(uint8));
     /* Initialize the VDP emulation */
     vdp_init();
 
@@ -97,6 +109,11 @@ void audio_init(int rate) {
 
 
 void system_shutdown(void) {
+     // free memory
+     printf("Free memory\n");
+    free(cachePtr);
+    free(cacheStore);
+    free(cacheStoreUsed);
     if (snd.enabled) {
 //        OPLL_delete(opll);
 //        OPLL_close();
@@ -105,6 +122,8 @@ void system_shutdown(void) {
 
 
 void system_reset(void) {
+   
+    
     cpu_reset();
     vdp_reset();
     sms_reset();
