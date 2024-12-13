@@ -403,8 +403,8 @@ void menu(uintptr_t NES_FILE_ADDR, char *errorMessage, bool isFatal, bool reset)
     /// size_t chr_size;
     // Borrow ChrBuffer to store directory contents
     // void *buffer = InfoNes_GetChrBuf(&chr_size);
-    size_t bufsize;
-    dirbuffer = (BYTE *) getcachestorefromemulator(&bufsize);
+    size_t bufsize = 32768;
+    dirbuffer = (BYTE *) malloc(bufsize);
     Frens::RomLister romlister(dirbuffer, bufsize);
     clearinput();
     if (strlen(errorMessage) > 0)
