@@ -22,7 +22,7 @@ void splash()
     strcpy(s, "Sega Master System/Game Gear");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 4, s, fgcolorSplash, bgcolorSplash);
 
-    strcpy(s, "Emulator");
+    strcpy(s, "emulator");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 5, s, fgcolorSplash, bgcolorSplash);
     strcpy(s, "for RP2040/RP2350");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 6, s, fgcolorSplash, bgcolorSplash);
@@ -52,5 +52,5 @@ void splash()
     strcpy(s, "https://github.com/");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 25, s, CBLUE, bgcolorSplash);
     strcpy(s, "fhoedemakers/pico-smsplus");
-    putText(1, 26, s, CBLUE, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 26, s, CBLUE, bgcolorSplash);
 }
