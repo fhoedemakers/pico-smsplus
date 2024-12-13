@@ -10,20 +10,22 @@ uint8 *linebuf;
 /* Precalculated pixel table */
 //uint16 pixel[PALETTE_SIZE];
 
-// Each tile takes up 8*8=64 bytes. We have 512 tiles * 4 attribs, so 2K tiles max.
-#define CACHEDTILES 512
+
 #define ALIGN_DWORD 1 // esp doesn't support unaligned word writes
 
-int16 cachePtr[512 * 4];            //(tile+attr<<9) -> cache tile store index (i<<6); -1 if not cached
-uint8 cacheStore[CACHEDTILES * 64]; // Tile store
-uint8 cacheStoreUsed[CACHEDTILES];  // Marks if a tile is used
+// int16 cachePtr[512 * 4];            //(tile+attr<<9) -> cache tile store index (i<<6); -1 if not cached
+// uint8 cacheStore[CACHEDTILES * 64]; // Tile store
+// uint8 cacheStoreUsed[CACHEDTILES];  // Marks if a tile is used
+int16 *cachePtr;                        //(tile+attr<<9) -> cache tile store index (i<<6); -1 if not cached
+uint8 *cacheStore;                      // Tile store    
+uint8 *cacheStoreUsed;                  // Marks if a tile is used
 
 // Share memory for using in main.cpp and menu.cpp when emulator is not running
-uint8_t *getcachestorefromemulator(size_t *size) {
-    *size = CACHEDTILES * 64;
-    printf("Acquired cacheStore from emulator: %d bytes\n", *size);
-    return cacheStore;
-}
+// uint8_t *getcachestorefromemulator(size_t *size) {
+//     *size = CACHEDTILES * 64;
+//     printf("Acquired cacheStore from emulator: %d bytes\n", *size);
+//     return cacheStore;
+// }
 uint8 is_vram_dirty;
 
 int cacheKillPtr = 0;
