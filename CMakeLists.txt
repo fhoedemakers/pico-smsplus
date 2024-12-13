@@ -18,7 +18,7 @@ project(${projectname} C CXX ASM)
 pico_sdk_init()
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 2 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if ( HW_CONFIG EQUAL 1 )
 	# This default Config is for Pimoroni Pico DV Demo Base
@@ -127,13 +127,7 @@ message("LED pin             : ${LED_GPIO_PIN}")
 
 add_executable(${projectname}
     main.cpp
-    hid_app.cpp
-    gamepad.cpp
-    nespad.cpp
-    wiipad.cpp
-    menu.cpp 
-    RomLister.cpp
-    FrensHelpers.cpp
+    splash.cpp
 )
 
 pico_set_program_name(${projectname} "${projectname}")
@@ -186,6 +180,7 @@ target_compile_definitions(${projectname} PUBLIC
     
 target_link_libraries(${projectname}
 PRIVATE
+    smscore
     pico_stdlib
     pico_multicore
     hardware_dma
@@ -196,26 +191,31 @@ PRIVATE
     hardware_clocks
     hardware_pwm
     hardware_flash
-    smscore
-    fatfs
-    sdcard
-    tinyusb_host
     dvi
     util
-    xinput_host
+    tinyusb_host 
+    pico_shared  
+    xinput_host 
 )
+if(PICO_BOARD STREQUAL "pico_w" OR PICO_BOARD STREQUAL "pico2_w")
+    # Attention pico2_w in arm-s or risv-s mode causes the led blinking to generate red screen flicker and
+    # multiple "[CYW43] do_ioctl(2, 263, 16): timeout" messages to the console.
+    # pico_w does not have this issue.
+    target_link_libraries(${projectname} PRIVATE pico_cyw43_arch_none)
+endif()
 
 target_include_directories(${projectname}
 PRIVATE
     pico_lib
     smsplus
+    tusb_xinput
+    pico_shared
     .
 )
 add_subdirectory(smsplus)
-add_subdirectory(drivers/fatfs)
-add_subdirectory(drivers/sdcard)
 add_subdirectory(pico_lib/dvi)
 add_subdirectory(pico_lib/util)
+add_subdirectory(pico_shared)
 add_subdirectory(tusb_xinput xinput_host)
 pico_add_extra_outputs(${projectname})
 

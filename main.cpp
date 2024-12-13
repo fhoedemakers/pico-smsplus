@@ -4,54 +4,27 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
 #include "hardware/divider.h"
-#include "hardware/dma.h"
-#include "hardware/pio.h"
-#include "hardware/i2c.h"
-#include "hardware/interp.h"
-#include "hardware/timer.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
 #include "hardware/watchdog.h"
-#include "hardware/pio.h"
-#include <hardware/sync.h>
-#include <pico/multicore.h>
-#include <hardware/flash.h>
-#include <memory>
-#include <math.h>
-#include <dvi/dvi.h>
-#include <util/dump_bin.h>
-#include <util/exclusive_proc.h>
-#include <util/work_meter.h>
-#include <tusb.h>
-
-#include "shared.h"
-#include "mytypes.h"
+#include "util/work_meter.h"
+#include "ff.h"
+#include "tusb.h"
 #include "gamepad.h"
 #include "menu.h"
 #include "nespad.h"
 #include "wiipad.h"
 #include "FrensHelpers.h"
-#ifdef __cplusplus
+#include "settings.h"
+#include "FrensFonts.h"
 
-#include "ff.h"
+#include "shared.h"
+#include "mytypes.h"
 
-#endif
 
-#ifndef DVICONFIG
-// #define DVICONFIG dviConfig_PicoDVI
-// #define DVICONFIG dviConfig_PicoDVISock
-#define DVICONFIG dviConfig_PimoroniDemoDVSock
-#endif
-
-#define ERRORMESSAGESIZE 40
-#define GAMESAVEDIR "/SAVES"
-util::ExclusiveProc exclProc_;
-std::unique_ptr<dvi::DVI> dvi_;
-
-char *ErrorMessage;
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
@@ -87,175 +60,8 @@ WORD SMSPaletteRGB444[64] = {
 namespace
 {
     constexpr uint32_t CPUFreqKHz = 252000;
-
-    constexpr dvi::Config dviConfig_PicoDVI = {
-        .pinTMDS = {10, 12, 14},
-        .pinClock = 8,
-        .invert = true,
-    };
-    // Breadboard with Adafruit compononents
-    constexpr dvi::Config dviConfig_PicoDVISock = {
-        .pinTMDS = {12, 18, 16},
-        .pinClock = 14,
-        .invert = false,
-    };
-    // Pimoroni Digital Video, SD Card & Audio Demo Board
-    constexpr dvi::Config dviConfig_PimoroniDemoDVSock = {
-        .pinTMDS = {8, 10, 12},
-        .pinClock = 6,
-        .invert = true,
-    };
-    // Adafruit Feather RP2040 DVI
-    constexpr dvi::Config dviConfig_AdafruitFeatherDVI = {
-        .pinTMDS = {18, 20, 22},
-        .pinClock = 16,
-        .invert = true,
-    };
-    // Waveshare RP2040-PiZero DVI
-    constexpr dvi::Config dviConfig_WaveShareRp2040 = {
-        .pinTMDS = {26, 24, 22},
-        .pinClock = 28,
-        .invert = false,
-    };
-
-    enum class ScreenMode
-    {
-        SCANLINE_8_7,
-        NOSCANLINE_8_7,
-        SCANLINE_1_1,
-        NOSCANLINE_1_1,
-        MAX,
-    };
-    ScreenMode screenMode_{};
-
-    bool scaleMode8_7_ = true;
-
-    void applyScreenMode()
-    {
-        bool scanLine = false;
-        printf("Screen mode: %d\n", static_cast<int>(screenMode_));
-        switch (screenMode_)
-        {
-        case ScreenMode::SCANLINE_1_1:
-            scaleMode8_7_ = false;
-            scanLine = true;
-            break;
-
-        case ScreenMode::SCANLINE_8_7:
-            scaleMode8_7_ = true;
-            scanLine = true;
-            break;
-
-        case ScreenMode::NOSCANLINE_1_1:
-            scaleMode8_7_ = false;
-            scanLine = false;
-            break;
-
-        case ScreenMode::NOSCANLINE_8_7:
-            scaleMode8_7_ = true;
-            scanLine = false;
-            break;
-        }
-
-        dvi_->setScanLine(scanLine);
-    }
-    void screenMode(int incr)
-    {
-        screenMode_ = static_cast<ScreenMode>((static_cast<int>(screenMode_) + incr) & 3);
-        applyScreenMode();
-    }
 }
 
-namespace
-{
-    dvi::DVI::LineBuffer *currentLineBuffer_{};
-}
-
-void __not_in_flash_func(drawWorkMeterUnit)(int timing,
-                                            [[maybe_unused]] int span,
-                                            uint32_t tag)
-{
-    if (timing >= 0 && timing < 640)
-    {
-        auto p = currentLineBuffer_->data();
-        p[timing] = tag; // tag = color
-    }
-}
-
-void __not_in_flash_func(drawWorkMeter)(int line)
-{
-    if (!currentLineBuffer_)
-    {
-        return;
-    }
-
-    memset(currentLineBuffer_->data(), 0, 64);
-    memset(&currentLineBuffer_->data()[320 - 32], 0, 64);
-    (*currentLineBuffer_)[160] = 0;
-    if (line == 4)
-    {
-        for (int i = 1; i < 10; ++i)
-        {
-            (*currentLineBuffer_)[16 * i] = 31;
-        }
-    }
-
-    constexpr uint32_t clocksPerLine = 800 * 10;
-    constexpr uint32_t meterScale = 160 * 65536 / (clocksPerLine * 2);
-    util::WorkMeterEnum(meterScale, 1, drawWorkMeterUnit);
-}
-
-bool initSDCard()
-{
-    FRESULT fr;
-    TCHAR str[40];
-    sleep_ms(1000);
-
-    printf("Mounting SDcard");
-    fr = f_mount(&fs, "", 1);
-    if (fr != FR_OK)
-    {
-        snprintf(ErrorMessage, ERRORMESSAGESIZE, "SD card mount error: %d", fr);
-        printf("\n%s\n", ErrorMessage);
-        return false;
-    }
-    printf("\n");
-
-    fr = f_chdir("/");
-    if (fr != FR_OK)
-    {
-        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot change dir to / : %d", fr);
-        printf("\n%s\n", ErrorMessage);
-        return false;
-    }
-    // for f_getcwd to work, set
-    //   #define FF_FS_RPATH		2
-    // in drivers/fatfs/ffconf.h
-    fr = f_getcwd(str, sizeof(str));
-    if (fr != FR_OK)
-    {
-        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot get current dir: %d", fr);
-        printf("\n%s\n", ErrorMessage);
-        return false;
-    }
-    printf("Current directory: %s\n", str);
-    printf("Creating directory %s\n", GAMESAVEDIR);
-    fr = f_mkdir(GAMESAVEDIR);
-    if (fr != FR_OK)
-    {
-        if (fr == FR_EXIST)
-        {
-            printf("Directory already exists.\n");
-        }
-        else
-        {
-            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot create dir %s: %d", GAMESAVEDIR, fr);
-            printf("%s\n", ErrorMessage);
-            return false;
-        }
-    }
-    return true;
-}
 int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
@@ -425,35 +231,7 @@ void system_save_state()
     // TODO
 }
 
-void in_ram(core1_main)()
-{
-    printf("core1 started\n");
-    while (true)
-    {
-        dvi_->registerIRQThisCore();
-        dvi_->waitForValidLine();
 
-        dvi_->start();
-        while (!exclProc_.isExist())
-        {
-            if (scaleMode8_7_)
-            {
-                dvi_->convertScanBuffer12bppScaled16_7(34, 32, 288 * 2);
-                // 34 + 252 + 34
-                // 32 + 576 + 32
-            }
-            else
-            {
-                dvi_->convertScanBuffer12bpp();
-            }
-        }
-
-        dvi_->unregisterIRQThisCore();
-        dvi_->stop();
-
-        exclProc_.processOrWaitIfExist();
-    }
-}
 int ProcessAfterFrameIsRendered()
 {
 #if NES_PIN_CLK != -1
@@ -461,9 +239,7 @@ int ProcessAfterFrameIsRendered()
 #endif
     auto count = dvi_->getFrameCounter();
     auto onOff = hw_divider_s32_quotient_inlined(count, 60) & 1;
-#if LED_GPIO_PIN != -1
-    gpio_put(LED_GPIO_PIN, onOff);
-#endif
+    Frens::blinkLed(onOff);
 #if NES_PIN_CLK != -1
     nespad_read_finish(); // Sets global nespad_state var
 #endif
@@ -610,11 +386,11 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             }
             if (pushed & INPUT_UP)
             {
-                screenMode(-1);
+                Frens::screenMode(-1);
             }
             else if (pushed & INPUT_DOWN)
             {
-                screenMode(+1);
+                Frens::screenMode(+1);
             }
         }
         prevButtons[i] = smsbuttons;
@@ -664,17 +440,11 @@ int main()
 {
     char selectedRom[FF_MAX_LFN];
     romName = selectedRom;
-    char errMSG[ERRORMESSAGESIZE];
-    errMSG[0] = selectedRom[0] = 0;
+    ErrorMessage[0] = selectedRom[0] = 0;
+   
     int fileSize = 0;
     bool isGameGear = false;
-    FIL fil;
-    FIL fil2;
-    FRESULT fr;
-    FRESULT fr2;
-    size_t tmpSize;
 
-    ErrorMessage = errMSG;
     // Set voltage and clock frequency
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(10);
@@ -683,201 +453,11 @@ int main()
     stdio_init_all();
     sleep_ms(500);
     printf("Starting Master System Emulator\n");
-
-#if LED_GPIO_PIN != -1
-    gpio_init(LED_GPIO_PIN);
-    gpio_set_dir(LED_GPIO_PIN, GPIO_OUT);
-    gpio_put(LED_GPIO_PIN, 1);
-#endif
-
-    // usb initialise
-    printf("USB Initialising\n");
+    printf("CPU freq: %d\n", clock_get_hz(clk_sys));
+    printf("Starting Tinyusb subsystem\n");
     tusb_init();
-    if ((isFatalError = !initSDCard()) == false)
-    {
-        // Load info about current game and determine file size.
-        printf("Reading current game from %s (if exists).\n", ROMINFOFILE);
-        fr = f_open(&fil, ROMINFOFILE, FA_READ);
-        if (fr == FR_OK)
-        {
-            size_t r;
-            fr = f_read(&fil, selectedRom, sizeof(selectedRom), &r);
-
-            if (fr != FR_OK)
-            {
-                snprintf(ErrorMessage, 40, "Cannot read %s:%d\n", ROMINFOFILE, fr);
-                selectedRom[0] = 0;
-                printf(ErrorMessage);
-            }
-            else
-            {
-                // determine file size
-                selectedRom[r] = 0;
-                isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
-                printf("Current game: %s\n", selectedRom);
-                printf("Console is %s\n", isGameGear ? "Game Gear" : "Master System");
-                printf("Determine filesize of %s\n", selectedRom);
-                fr2 = f_open(&fil2, selectedRom, FA_READ);
-                if (fr2 == FR_OK)
-                {
-                    fileSize = (int)f_size(&fil2);
-                    printf("File size: %d Bytes (0x%x)\n", fileSize, fileSize);
-                }
-                else
-                {
-                    snprintf(ErrorMessage, 40, "Cannot open rom %d", fr2);
-                    printf("%s\n", ErrorMessage);
-                    selectedRom[0] = 0;
-                }
-                f_close(&fil2);
-            }
-        }
-        else
-        {
-            snprintf(ErrorMessage, 40, "Cannot open %s:%d\n", ROMINFOFILE, fr);
-            printf(ErrorMessage);
-        }
-        f_close(&fil);
-    }
-    // When a game is started from the menu, the menu will reboot the device.
-    // After reboot the emulator will start the selected game.
-    if (watchdog_enable_caused_reboot() && isFatalError == false && selectedRom[0] != 0)
-    {
-        // Determine loaded rom
-        printf("Rebooted by menu\n");
-
-        printf("Starting (%d) %s\n", strlen(selectedRom), selectedRom);
-        printf("Checking for /START file. (Is start pressed in Menu?)\n");
-        fr = f_unlink("/START");
-        if (fr == FR_NO_FILE)
-        {
-            printf("Start not pressed, flashing rom.\n");
-            // Allocate buffer for flashing. Borrow emulator memory for this.
-            // size_t bufsize = 0;                                 // 0x2000;
-            // BYTE *buffer = getcachestorefromemulator(&bufsize); //(BYTE *)malloc(bufsize);
-            size_t bufsize = 0x1000;    // Write 4k at a time, larger sizes will increases the risk of making XInput unresponsive. (Still happens sometimes)                              
-            BYTE *buffer = (BYTE *)malloc(bufsize);
-
-            auto ofs = SMS_FILE_ADDR - XIP_BASE;
-            printf("write rom %s to flash %x\n", selectedRom, ofs);
-            UINT totalBytes = 0;
-            fr = f_open(&fil, selectedRom, FA_READ);
-#if LED_GPIO_PIN != -1
-            bool onOff = true;
-#endif
-            UINT bytesRead;
-            if (fr == FR_OK)
-            {
-                // filesize already known.
-                if ((fileSize / 512) & 1)
-                {
-                    printf("Skipping header\n");
-                    fr = f_lseek(&fil, 512);
-                    if (fr != FR_OK)
-                    {
-                        snprintf(ErrorMessage, 40, "Error skipping header: %d", fr);
-                        printf("%s\n", ErrorMessage);
-                        selectedRom[0] = 0;
-                    }
-                }
-                if (fr == FR_OK)
-                {
-
-                    for (;;)
-                    {
-                        fr = f_read(&fil, buffer, bufsize, &bytesRead);
-                        if (fr == FR_OK)
-                        {
-                            if (bytesRead == 0)
-                            {
-                                break;
-                            }
-#if LED_GPIO_PIN != -1
-                            gpio_put(LED_GPIO_PIN, onOff);
-                            onOff = !onOff;
-#endif
-                            // Disable interupts, erase, flash and enable interrupts
-                            uint32_t ints = save_and_disable_interrupts();
-                            flash_range_erase(ofs, bufsize);
-                            flash_range_program(ofs, buffer, bufsize);
-                            restore_interrupts(ints);
-                            ofs += bufsize;
-                            totalBytes += bytesRead;
-                            // keep the usb stack running
-                            tuh_task();
-                        }
-                        else
-                        {
-                            snprintf(ErrorMessage, 40, "Error reading rom: %d", fr);
-                            printf("Error reading rom: %d\n", fr);
-                            selectedRom[0] = 0;
-                            break;
-                        }
-                    }
-                }
-                f_close(&fil);
-                printf("Wrote %d bytes to flash\n", totalBytes);
-            }
-            else
-            {
-                snprintf(ErrorMessage, 40, "Cannot open rom %d", fr);
-                printf("%s\n", ErrorMessage);
-                selectedRom[0] = 0;
-            }
-            free(buffer);
-            printf("Flashing done\n");
-        }
-        else
-        {
-            if (fr != FR_OK)
-            {
-                snprintf(ErrorMessage, 40, "Cannot delete /START file %d", fr);
-                printf("%s\n", ErrorMessage);
-                selectedRom[0] = 0;
-            }
-            else
-            {
-                printf("Start pressed in menu, not flashing rom.\n");
-            }
-        }
-    }
-    else
-    {
-        selectedRom[0] = 0;
-    }
-    //
-    printf("Initialising DVI\n");
-    dvi_ = std::make_unique<dvi::DVI>(pio0, &DVICONFIG,
-                                      dvi::getTiming640x480p60Hz());
-    //    dvi_->setAudioFreq(48000, 25200, 6144);
-    dvi_->setAudioFreq(44100, 28000, 6272);
-    dvi_->allocateAudioBuffer(256);
-    //    dvi_->setExclusiveProc(&exclProc_);
-
-    // Adjust the top and bottom to center the emulator screen
-    dvi_->getBlankSettings().top = MARGINTOP * 2;
-    dvi_->getBlankSettings().bottom = MARGINBOTTOM * 2;
-    // dvi_->setScanLine(true);
-
-    applyScreenMode();
-#if NES_PIN_CLK != -1
-    nespad_begin(0, CPUFreqKHz, NES_PIN_CLK, NES_PIN_DATA, NES_PIN_LAT, NES_PIO);
-#endif
-#if NES_PIN_CLK_1 != -1
-    nespad_begin(1, CPUFreqKHz, NES_PIN_CLK_1, NES_PIN_DATA_1, NES_PIN_LAT_1, NES_PIO_1);
-#endif
-#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
-    wiipad_begin();
-#endif
-    // 空サンプル詰めとく
-    dvi_->getAudioRingBuffer().advanceWritePointer(255);
-
-    multicore_launch_core1(core1_main);
-    // smsp_gamedata_set(argv[1]);
-    // Check the type of ROM
-    // sms.console = strcmp(strrchr(argv[1], '.'), ".gg") ? CONSOLE_SMS : CONSOLE_GG;
-    // sms.console = CONSOLE_SMS; // For now, we only support SMS
-    //
+    isFatalError =  !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM );
+    bool showSplash = true;
 
     while (true)
     {
@@ -886,13 +466,31 @@ int main()
             // reset margin to give menu more screen space
             dvi_->getBlankSettings().top = 4 * 2;
             dvi_->getBlankSettings().bottom = 4 * 2;
-            screenMode_ = ScreenMode::NOSCANLINE_8_7;
-            applyScreenMode();
-            menu(SMS_FILE_ADDR, ErrorMessage, isFatalError, reset);
+            scaleMode8_7_ = Frens::applyScreenMode(ScreenMode::NOSCANLINE_8_7);
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg"); // never returns, but reboots upon selecting a game
         }
         reset = false;
-        printf("Now playing: %s\n", selectedRom);
-        load_rom(fileSize, isGameGear);
+        FRESULT fr;
+        FIL file;
+        fr = f_open(&file, selectedRom, FA_READ);
+        if (fr != FR_OK)
+        {
+            snprintf(ErrorMessage, 40, "Cannot open rom %d", fr);
+            printf("%s\n", ErrorMessage);
+            selectedRom[0] = 0;
+            continue;
+        }
+        fileSize = f_size(&file);
+        f_close(&file);
+        isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
+        printf("Now playing: %s (%d bytes)\n", selectedRom, fileSize);
+        if (isGameGear)
+        {
+            printf("Game Gear rom detected\n");
+        } else {
+            printf("Master System rom detected\n");
+        }
+        load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any
@@ -902,6 +500,7 @@ int main()
         process();
         system_shutdown();
         selectedRom[0] = 0;
+        showSplash = false;
     }
 
     return 0;

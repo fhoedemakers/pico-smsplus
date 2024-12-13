@@ -33,6 +33,29 @@ For the latest two player PCB 2.0, you need:
 
 # Release notes
 
+## v0.14 (To be released)
+
+### Technical changes
+
+- Lots of code is now moved to git module pico_shared. This is code that can be shared between other RP2040/RP2350 emulators. This includes the menu system, the SD-card handling, the display handling. Also the code for controller input (NES, Wii-Classic, USB, keyboard) is moved to this module. When building from source, make sure you do a **git submodule update --init** from within the source folder to get the pico_shared module and all the other modules.
+
+### Features
+
+Because of the shared code, the following features are now available in Pico-SMSPlus:
+
+- Some settings are now saved to SD card. This includes the selected screen mode, chosen with Select+Up or Select+Down  and the last chosen menu selection. Settings are written to /settings.dat on the SD-card. When screen mode is changed, this will be automatically saved. The causes some red flicker due to the delay it causes.
+- The colors in the menu can be changed and saved:
+  - Select + Up/Down changes the foreground color.
+  - Select + Left/Right changes the background color.
+  - Select + A saves the colors. Screen will flicker when saved.
+  - Select + B resets the colors to default. (Black on white)
+
+### Fixes
+
+-
+
+
+
 ## v0.13
 
 ### Features
