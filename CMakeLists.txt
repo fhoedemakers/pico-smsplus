@@ -18,13 +18,13 @@ project(${projectname} C CXX ASM)
 pico_sdk_init()
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 2 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if ( HW_CONFIG EQUAL 1 )
 	# This default Config is for Pimoroni Pico DV Demo Base
 	set(DVICONFIG "dviConfig_PimoroniDemoDVSock" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
-    set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
+    set(LED_GPIO_PIN "0" CACHE STRING "Select the GPIO pin for LED")
 	set(SD_CS "22" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
 	set(SD_SCK "5" CACHE STRING "Specify de Clock GPIO pin for the SD card")
 	set(SD_MOSI "18" CACHE STRING "Select the Master Out Slave In GPIO pin for the SD card")
@@ -47,7 +47,7 @@ elseif ( HW_CONFIG EQUAL 2 )
 	# Adafruit DVI Breakout For HDMI Source Devices https://www.adafruit.com/product/4984
 	set(DVICONFIG "dviConfig_PicoDVISock" CACHE STRING
 	  "Select a default pin configuration from common_dvi_pin_configs.h")
-    set(LED_GPIO_PIN "25" CACHE STRING "Select the GPIO pin for LED")
+    set(LED_GPIO_PIN "0" CACHE STRING "Select the GPIO pin for LED")
 	# Adafruit Micro-SD breakout board+ https://www.adafruit.com/product/254 
 	set(SD_CS "5" CACHE STRING "Specify the Chip Select GPIO pin for the SD card")
 	set(SD_SCK "2" CACHE STRING "Specify de Clock GPIO pin for the SD card")
