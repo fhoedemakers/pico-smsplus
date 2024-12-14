@@ -50,7 +50,7 @@ Because of the shared code, the following features are now available in Pico-SMS
 
 ### Fixes
 
-- Can now be built for pico w (RP2040). This makes the led blink every 60 frames or when rom is flashed. This only works for the Pico w. Pico2 w (RP2350) is not supported, because it causes screen flicker and ioctl timeouts. 
+- Can now be built for pico w (RP2040). This makes the led blink every 60 frames or when rom is flashed. This only works for the Pico w. Pico2 w (RP2350) is not supported, because it causes screen flicker and ioctl timeouts on the uart console. 
 
 To build for Pico w, use the following commands:
 
