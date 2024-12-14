@@ -4,21 +4,20 @@
 
 Binaries are at the end of this page.
 
+Binaries for each configuration and PCB design are at the end of this page.
+
+- For Raspberry Pi Pico (RP2040) you need to download the .uf2 files starting with pico_ or pico_.
+- For Raspberry Pi Pico w (rp2040) you can download the .uf2 files starting with pico_w_. Although you can also use the pico_ binaries on the Pico w if you don't mind the blinking led.
+- For Raspberry Pi Pico 2 (RP2350) you need to download the .uf2 files starting with pico2_ or pico2_riscv_ for Risc-V. 
+
 >[!NOTE]
->For Raspberry Pi Pico 2 you need to download the .uf2 files starting with pico2_ or pico2_riscv_ for Risc-V.
+>There is no build for the Pico 2 w because of issues with the display.
 
 
-[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). 
 
-- pico_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico
-- pico_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico
-- pico_picosmsPlusFeatherDVI.uf2: Adafruit Feather DVI
-- pico_picosmsPlusWsRP2040PiZero.uf2: Waveshare RP2040-Pizero
-- pico2_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico 2/RP2350 - Arm-s
-- pico2_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Arm-s
-- pico2_riscv_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico 2/RP2350 - Risc-V
-- pico2_riscv_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Risc-V
-- pico_nesPCB_v2.1.zip: PCB Design. For more info see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus#pcb-with-raspberry-pi-pico-or-pico-2).
+For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+
 
 3D-printed case design for PCB: [https://www.thingiverse.com/thing:6689537](https://www.thingiverse.com/thing:6689537). 
 For the latest two player PCB 2.0, you need:
