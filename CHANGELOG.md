@@ -4,21 +4,19 @@
 
 Binaries are at the end of this page.
 
+Binaries for each configuration and PCB design are at the end of this page.
+
+- For Raspberry Pi Pico (RP2040) you need to download the .uf2 files starting with pico_.
+- For Raspberry Pi Pico w (rp2040) you can download the .uf2 files starting with pico_w_. Although you can also use the pico_ binaries on the Pico w if you don't mind the blinking led.
+- For Raspberry Pi Pico 2 (w) (RP2350) you need to download the .uf2 files starting with pico2_ or pico2_riscv_ for Risc-V. 
+
 >[!NOTE]
->For Raspberry Pi Pico 2 you need to download the .uf2 files starting with pico2_ or pico2_riscv_ for Risc-V.
+>There is no specific build for the Pico 2 w because of issues with the display when blinking the led. Use the pico_2_ binaries instead. There is no blinking led on the Pico 2 w.
 
+[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). 
 
-[See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
+For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
 
-- picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico
-- picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico
-- picosmsPlusFeatherDVI.uf2: Adafruit Feather DVI
-- picosmsPlusWsRP2040PiZero.uf2: Waveshare RP2040-Pizero
-- pico2_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico 2/RP2350 - Arm-s
-- pico2_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Arm-s
-- pico2_riscv_picosmsPlusAdaFruitDVISD.uf2: Printed Circuit Board or Breadboard config with Pico 2/RP2350 - Risc-V
-- pico2_riscv_picosmsPlusimoroniDV.uf2: Pimoroni Pico DV Demo Base with Pico 2/RP2350 - Risc-V
-- pico_nesPCB_v2.1.zip: PCB Design. For more info see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus#pcb-with-raspberry-pi-pico-or-pico-2).
 
 3D-printed case design for PCB: [https://www.thingiverse.com/thing:6689537](https://www.thingiverse.com/thing:6689537). 
 For the latest two player PCB 2.0, you need:
@@ -32,6 +30,37 @@ For the latest two player PCB 2.0, you need:
 3D-printed case design for Waveshare RP2040-PiZero: [https://www.thingiverse.com/thing:6758682](https://www.thingiverse.com/thing:6758682)
 
 # Release notes
+
+## v0.14
+
+### Technical changes
+
+- Lots of code is now moved to git module pico_shared. This is code that can be shared between other RP2040/RP2350 emulators. This includes the menu system, the SD-card handling, the display handling. Also the code for controller input (NES, Wii-Classic, USB, keyboard) is moved to this module. When building from source, make sure you do a **git submodule update --init** from within the source folder to get the pico_shared module and all the other modules.
+
+### Features
+
+Because of the shared code, the following features are now available in Pico-SMSPlus:
+
+- Some settings are now saved to SD card. This includes the selected screen mode, chosen with Select+Up or Select+Down  and the last chosen menu selection. Settings are written to /settings.dat on the SD-card. When screen mode is changed, this will be automatically saved. The causes some red flicker due to the delay it causes.
+- The colors in the menu can be changed and saved:
+  - Select + Up/Down changes the foreground color.
+  - Select + Left/Right changes the background color.
+  - Select + A saves the colors. Screen will flicker when saved.
+  - Select + B resets the colors to default. (Black on white)
+
+### Fixes
+
+- Can now be built for pico w (RP2040). This makes the led blink every 60 frames or when rom is flashed. This only works for the Pico w. Pico2 w (RP2350) is not supported, because it causes screen flicker and ioctl timeouts on the uart console. 
+
+To build for Pico w, use the following commands:
+
+```bash
+# Pimoroni DV Demo Base
+./bld.sh -c1 -w
+# Custom PCB/breadboard
+./bld.sh -c2 -w
+```
+
 
 ## v0.13
 

@@ -95,9 +95,14 @@ typedef struct
 
 //     return 1;
 // }
-int load_rom(int size, bool isGameGear)
+int load_rom(uintptr_t addr,   int size, bool isGameGear)
 {
-    uint8_t *start = (uint8_t *)SMS_FILE_ADDR;
+    uint8_t *start = (uint8_t *)addr;
+     if ((size / 512) & 1)
+    {
+        size -= 512;
+        start += 512;
+    }
     sms.use_fm = 0;
     sms.country = TYPE_OVERSEAS;
     sms.sram = sram;

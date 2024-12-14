@@ -48,6 +48,13 @@ extern "C" {
 #include "system.h"
 
 char unalChar(const char *adr);
+
+// Each tile takes up 8*8=64 bytes. We have 512 tiles * 4 attribs, so 2K tiles max.
+#define CACHEDTILES 512
+
+extern int16 *cachePtr;                  /// [512 * 4];            // 512 * 4 *2    (tile+attr<<9) -> cache tile store index (i<<6); -1 if not cached
+extern uint8 *cacheStore;                // [CACHEDTILES * 64]; // Tile store
+extern uint8 *cacheStoreUsed;            // [CACHEDTILES];  // Marks if a tile is used
 uint8_t *getcachestorefromemulator(size_t *size);
 #ifdef __cplusplus
 }
