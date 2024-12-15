@@ -103,11 +103,7 @@ void in_ram(processaudio)(int offset)
         samples -= n;
     }
 }
-uint32_t time_us()
-{
-    absolute_time_t t = get_absolute_time();
-    return to_us_since_boot(t);
-}
+
 
 extern "C" void in_ram(sms_palette_syncGG)(int index)
 {
@@ -249,9 +245,9 @@ int ProcessAfterFrameIsRendered()
     if (fps_enabled)
     {
         // calculate fps and round to nearest value (instead of truncating/floor)
-        uint32_t tick_us = time_us() - start_tick_us;
+        uint32_t tick_us = Frens::time_us() - start_tick_us;
         fps = (1000000 - 1) / tick_us + 1;
-        start_tick_us = time_us();
+        start_tick_us = Frens::time_us();
         fpsString[0] = '0' + (fps / 10);
         fpsString[1] = '0' + (fps % 10);
     }
