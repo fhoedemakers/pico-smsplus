@@ -454,15 +454,10 @@ int main()
     tusb_init();
     isFatalError =  !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM );
     bool showSplash = true;
-
     while (true)
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            // reset margin to give menu more screen space
-            dvi_->getBlankSettings().top = 4 * 2;
-            dvi_->getBlankSettings().bottom = 4 * 2;
-            scaleMode8_7_ = Frens::applyScreenMode(ScreenMode::NOSCANLINE_8_7);
             menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg"); // never returns, but reboots upon selecting a game
         }
         reset = false;
