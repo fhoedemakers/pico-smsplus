@@ -93,9 +93,9 @@ void in_ram(processaudio)(int offset)
         int ct = n;
         while (ct--)
         {
-            int l = (*p1++ << 16) + *p2++;
+            int l = *p1++; // (*p1++ << 16) + *p2++;
             // works also : int l = (*p1++ + *p2++) / 2;
-            int r = l;
+            int r = *p2++;
             // int l = *wave1++;
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
         }
