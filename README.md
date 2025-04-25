@@ -52,6 +52,10 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 - [Adafruit Feather RP2040 with DVI Output](https://www.adafruit.com/product/5710) and [FeatherWing - RTC + SD](https://www.adafruit.com/product/2922).
 - [Waveshare RP2040-PiZero Development Board](https://www.waveshare.com/rp2040-pizero.htm)
 
+## Other RP2350 based boards
+
+- [Adafruit Metro RP2350](https://www.adafruit.com/product/6003) or [Adafruit Metro RP2350 with PSRAM](https://www.adafruit.com/product/6267)
+
 
 ***
 

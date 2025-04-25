@@ -4,15 +4,10 @@
 
 Binaries are at the end of this page.
 
-Binaries for each configuration and PCB design are at the end of this page.
-
-- For Raspberry Pi Pico (RP2040) you need to download the .uf2 files starting with pico_.
-- For Raspberry Pi Pico w (rp2040) you can download the .uf2 files starting with pico_w_. Although you can also use the pico_ binaries on the Pico w if you don't mind the blinking led.
-- For Raspberry Pi Pico 2 (w) (RP2350) you need to download the .uf2 files starting with pico2_ or pico2_riscv_ for Risc-V. 
-
->[!NOTE]
->There is no specific build for the Pico 2 w because of issues with the display when blinking the led. Use the pico_2_ binaries instead. There is no blinking led on the Pico 2 w.
-
+- For Raspberry Pi Pico (RP2040) you need to download the .uf2 files starting with pico_picosmsPlus.
+- For Raspberry Pi Pico w (rp2040) you can download the .uf2 files starting with pico_w_picosmsPlus. Although you can also use the pico_picosmsPlus binaries on the Pico w if you don't mind the blinking led.
+- For Raspberry Pi Pico 2 (RP2350) you need to download the .uf2 files starting with pico2_picosmsPlus for ARM or pico2_riscv_picosmsPlus  for Risc-V. 
+- For Raspberry Pi Pico 2 w (RP2350) you can download the .uf2 files starting with pico2_w_picosmsPlus for ARM or pico2_w_riscv_picosmsPlus for Risc-V Although you can also use the pico2_picosmsPlus binaries on the Pico w if you don't mind the blinking led.
 [See readme section how to install and wire up](https://github.com/fhoedemakers/pico-smsplus#pico-smsplus). 
 
 For more detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
@@ -29,15 +24,17 @@ For the latest two player PCB 2.0, you need:
 
 3D-printed case design for Waveshare RP2040-PiZero: [https://www.thingiverse.com/thing:6758682](https://www.thingiverse.com/thing:6758682)
 
-# v0.16 release notes
-
-## Features
-- Enable fastscrolling in the menu, by holding up/down/left/right for 500 milliseconds, repeat delay is 40 milliseconds.
-- bld.sh mow uses the amount of cores available on the system to speed up the build process. An optional -p flag can be used to specify the amount of cores to use.
-- Updated to latest version of pico_lib and pico_shared submodules.
+# v0.17 release notes
+- Releases now built with SDK 2.1.1
+- Support added for Adafruit Metro RP2350 board. See README for more info. No RISCV support yet.
+- Switched to SD card driver pico_fatfs from https://github.com/elehobica/pico_fatfs. This is required for the Adafruit Metro RP2350. The Pimoroni Pico DV does not work with this updated version and still needs the old version. (see [https://github.com/elehobica/pico_fatfs/issues/7#issuecomment-2817953143](https://github.com/elehobica/pico_fatfs/issues/7#issuecomment-2817953143) ) Therefore, the old version is still included in the repository. (pico_shared/drivers/pio_fatfs) 
+    This is configured in CMakeLists.txt file by setting USE_OLD_SDDRIVER to 1.
+- Besides FAT32, SD cards can now also be formatted as exFAT.
+- Nes controller PIO code updated by [@ManCloud](https://github.com/ManCloud). This fixes the NES controller issues on the Waveshare RP2040 - PiZero board. [#8](https://github.com/fhoedemakers/pico_shared/issues/8)
 
 ## Fixes
-- Temporary Rollback NesPad code for the WaveShare RP2040-PiZero only. Other configurations are not affected.
-- Update time functions to return milliseconds and use uint64_t to return microseconds.
+- Fixed Pico 2 W: Led blinking causes screen flicker and ioctl timeouts [#2](https://github.com/fhoedemakers/pico_shared/issues/2). Solved with in SDK 2.1.1
+- WII classic controller: i2c bus instance (i2c0 / i2c1) not hardcoded anymore but configurable via CMakeLists.txt. 
+
 
 All changes are in the pico_shared submodule. When building from source, make sure you do a **git submodule update --init** from within the source folder to get the latest pico_shared module.
