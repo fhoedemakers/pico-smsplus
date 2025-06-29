@@ -216,7 +216,12 @@ void system_load_sram(void)
     FRESULT fr;
 
     size_t bytesRead;
-
+    if ( !sms.sram )
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "sms.sram is NULL, cannot load SRAM");
+        printf("%s\n", ErrorMessage);
+        return;
+    }
     printf("Load SRAM from %s\n", pad);
     fr = f_stat(pad, &fno);
     if (fr == FR_NO_FILE)
@@ -244,7 +249,8 @@ void system_load_sram(void)
         fr = f_read(&fil, sms.sram, SRAMSIZEBYTES, &bytesRead);
         if (fr == FR_OK)
         {
-            printf("Savefile read from disk\n");
+            printf("Savefile read from disk %d bytes\n", bytesRead);
+            sms.save = 1;
             ok = true;
         }
         else
