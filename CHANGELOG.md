@@ -24,18 +24,14 @@ For the latest two player PCB 2.0, you need:
 
 3D-printed case design for Waveshare RP2040-PiZero: [https://www.thingiverse.com/thing:6758682](https://www.thingiverse.com/thing:6758682)
 
-# v0.17 release notes (this is a re-release)
+# v0.18 Release Notes
 
-- Releases now built with SDK 2.1.1
-- Support added for Adafruit Metro RP2350 board. See README for more info. No RISCV support yet.
-- Switched to SD card driver pico_fatfs from https://github.com/elehobica/pico_fatfs. This is required for the Adafruit Metro RP2350. Thanks to [elehobica](https://github.com/elehobica/pico_fatfs) for helping making it work for the Pimoroni Pico DV Demo board.
-- Besides FAT32, SD cards can now also be formatted as exFAT.
-- Nes controller PIO code updated by [@ManCloud](https://github.com/ManCloud). This fixes the NES controller issues on the Waveshare RP2040 - PiZero board. [#8](https://github.com/fhoedemakers/pico_shared/issues/8)
-- Board configs are moved to pico_shared.
+- Save game functionality has been added for SMS games that support it. To ensure game data is properly saved to the SD card, you must return to the menu by pressing Select + Start
+Save files are stored in the /SAVES directory with a .SAV extension.
+When you launch the game again, the corresponding save file will be loaded automatically.
+
 
 ## Fixes
-- Fixed Pico 2 W: Led blinking causes screen flicker and ioctl timeouts [#2](https://github.com/fhoedemakers/pico_shared/issues/2). Solved with in SDK 2.1.1
-- WII classic controller: i2c bus instance (i2c0 / i2c1) not hardcoded anymore but configurable via CMakeLists.txt. 
+- none
 
 
-All changes are in the pico_shared submodule. When building from source, make sure you do a **git submodule update --init** from within the source folder to get the latest pico_shared module.
