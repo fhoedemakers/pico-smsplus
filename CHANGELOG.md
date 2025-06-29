@@ -26,7 +26,7 @@ For the latest two player PCB 2.0, you need:
 
 # v0.18 Release Notes
 
-- Save game functionality has been added for SMS games that support it. To ensure game data is properly saved to the SD card, **you must return to the menu by pressing Select + Start.**
+- Save game functionality has been added for [SMS games that support it](https://consolemods.org/wiki/Master_System:List_of_Master_System_Games_with_Save_Batteries). To ensure game data is properly saved to the SD card, **you must return to the menu by pressing Select + Start.**
 Save files are stored in the /SAVES directory with a .SAV extension.
 When you launch the game again, the corresponding save file will be loaded automatically.
 
