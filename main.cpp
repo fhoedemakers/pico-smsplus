@@ -24,7 +24,6 @@
 #include "shared.h"
 #include "mytypes.h"
 
-
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
@@ -103,7 +102,6 @@ void in_ram(processaudio)(int offset)
         samples -= n;
     }
 }
-
 
 extern "C" void in_ram(sms_palette_syncGG)(int index)
 {
@@ -205,16 +203,96 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 
 void system_load_sram(void)
 {
-    printf("system_load_sram: TODO\n");
+    char pad[FF_MAX_LFN];
+    FILINFO fno;
+    bool ok = false;
+    char fileName[FF_MAX_LFN];
+    strcpy(fileName, Frens::GetfileNameFromFullPath(romName));
+    Frens::stripextensionfromfilename(fileName);
 
-    // TODO
+    snprintf(pad, FF_MAX_LFN, "%s/%s.SAV", GAMESAVEDIR, fileName);
+
+    FIL fil;
+    FRESULT fr;
+
+    size_t bytesRead;
+
+    printf("Load SRAM from %s\n", pad);
+    fr = f_stat(pad, &fno);
+    if (fr == FR_NO_FILE)
+    {
+        printf("No save file found, skipping load.\n");
+        return;
+    }
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "f_stat() failed on save file: %d", fr);
+        printf("%s\n", ErrorMessage);
+        return;
+    }
+    if (fno.fsize != SRAMSIZEBYTES)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Save file size mismatch: %d != %d", fno.fsize, SRAMSIZEBYTES);
+        printf("%s\n", ErrorMessage);
+        return;
+    }
+
+    printf("Loading save file %s\n", pad);
+    fr = f_open(&fil, pad, FA_READ);
+    if (fr == FR_OK)
+    {
+        fr = f_read(&fil, sms.sram, SRAMSIZEBYTES, &bytesRead);
+        if (fr == FR_OK)
+        {
+            printf("Savefile read from disk\n");
+            ok = true;
+        }
+        else
+        {
+            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot read save file: %d %d/%d read", fr, bytesRead, SRAMSIZEBYTES);
+            printf("%s\n", ErrorMessage);
+        }
+    }
+    else
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot open save file: %d", fr);
+        printf("%s\n", ErrorMessage);
+    }
+    f_close(&fil);
 }
 
 void system_save_sram()
 {
-    printf("system_save_sram: saving sram TODO\n");
-
-    // TODO
+    char pad[FF_MAX_LFN];
+    char fileName[FF_MAX_LFN];
+    printf("system_save_sram: Saving SRAM\n");
+    strcpy(fileName, Frens::GetfileNameFromFullPath(romName));
+    Frens::stripextensionfromfilename(fileName);
+    if (!sms.save)
+    {
+        printf("SRAM not updated.\n");
+        return;
+    }
+    snprintf(pad, FF_MAX_LFN, "%s/%s.SAV", GAMESAVEDIR, fileName);
+    printf("Save SRAM to %s\n", pad);
+    FIL fil;
+    FRESULT fr;
+    fr = f_open(&fil, pad, FA_CREATE_ALWAYS | FA_WRITE);
+    if (fr != FR_OK)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Cannot open save file: %d", fr);
+        printf("%s\n", ErrorMessage);
+        return;
+    }
+    size_t bytesWritten;
+    fr = f_write(&fil, sms.sram, SRAMSIZEBYTES, &bytesWritten);
+    if (bytesWritten < SRAMSIZEBYTES)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "Error writing save: %d %d/%d written", fr, bytesWritten, SRAMSIZEBYTES);
+        printf("%s\n", ErrorMessage);
+    }
+    f_close(&fil);
+    printf("done\n");
 }
 
 void system_load_state()
@@ -226,7 +304,6 @@ void system_save_state()
 {
     // TODO
 }
-
 
 int ProcessAfterFrameIsRendered()
 {
@@ -285,10 +362,11 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         int nespadbuttons = 0;
         auto &dst = (i == 0) ? *pdwPad1 : *pdwPad2;
         auto &gp = io::getCurrentGamePadState(i);
-        if ( i == 0 )
+        if (i == 0)
         {
             usbConnected = gp.isConnected();
-            if (gamepadType) {
+            if (gamepadType)
+            {
                 strcpy(gamepadType, gp.GamePadName);
             }
         }
@@ -308,10 +386,10 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #if NES_PIN_CLK != -1
         // When USB controller is connected both NES ports act as controller 2
         if (usbConnected)
-        {          
+        {
             if (i == 1)
             {
-                 nespadbuttons= nespadbuttons | nespad_states[1] | nespad_states[0];
+                nespadbuttons = nespadbuttons | nespad_states[1] | nespad_states[0];
             }
         }
         else
@@ -319,7 +397,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             nespadbuttons |= nespad_states[i];
         }
 #endif
-// When USB controller is connected  wiipad acts as controller 2 
+// When USB controller is connected  wiipad acts as controller 2
 #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
         if (usbConnected)
         {
@@ -368,6 +446,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             if (pushedsystem & INPUT_START)
             {
+                system_save_sram();
                 reset = true;
                 printf("Reset pressed\n");
             }
@@ -437,7 +516,7 @@ int main()
     char selectedRom[FF_MAX_LFN];
     romName = selectedRom;
     ErrorMessage[0] = selectedRom[0] = 0;
-   
+
     int fileSize = 0;
     bool isGameGear = false;
 
@@ -452,7 +531,7 @@ int main()
     printf("CPU freq: %d\n", clock_get_hz(clk_sys));
     printf("Starting Tinyusb subsystem\n");
     tusb_init();
-    isFatalError =  !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM );
+    isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM);
     bool showSplash = true;
     while (true)
     {
@@ -478,7 +557,9 @@ int main()
         if (isGameGear)
         {
             printf("Game Gear rom detected\n");
-        } else {
+        }
+        else
+        {
             printf("Master System rom detected\n");
         }
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
