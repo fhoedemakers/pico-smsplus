@@ -24,7 +24,22 @@ Click on image below to see a demo video.
 > On Pico/RP2040, some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
 > Runs much better on Pico 2/RP2350.
 
-*** 
+***
+
+## Save Game Support for SMS Games
+
+[For Sega Master System (SMS) games that support it](https://consolemods.org/wiki/Master_System:List_of_Master_System_Games_with_Save_Batteries), progress can be saved to SD card.
+
+### How It Works
+
+- **Saving**: To ensure game data is written to the SD card, you must return to the main menu by pressing **Select + Start**.
+- **Save Location**: Save files are stored in the `/SAVES` directory with a `.SAV` extension.
+- **Auto-Loading**: When you start a game, its corresponding `.SAV` file will be loaded automatically (if available).
+
+>[!NOTE]
+>Make sure to return to the menu before powering off, or the save data may be lost.
+
+***
 
 ## System requirements and setup - What do yo need?
 
@@ -59,14 +74,18 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 
 ***
 
-## Supported USB controller
+## Supported USB controllers
 The following controllers are supported.
 
 - BUFFALO BGC-FC801
 - SONY DUALSHOCK 4
 - SONY DualSense
+- Xinput type controllers (Xbox)
+- and more...
 
-Also original NES and WII-classic controllers are supported in some configurations. See the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus) for more info.
+Also original NES and WII-classic controllers are supported in some configurations. 
+
+See the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#gamecontroller-support) for more info.
 
 ***
 

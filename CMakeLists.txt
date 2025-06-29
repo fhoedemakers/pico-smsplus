@@ -12,16 +12,19 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 message("* Current build type is : ${CMAKE_BUILD_TYPE}")
 
+
+if (NOT HW_CONFIG)
+    set(HW_CONFIG 2 CACHE STRING "Select the hardware configuration for your board")       
+endif()
+include("pico_shared/BoardConfigs.cmake")
+if (NOT PICO_BOARD )
+    set(PICO_BOARD pico2 CACHE STRING "Board type")
+    message("PICO_BOARD not set, using default: ${PICO_BOARD}")
+endif()
 include(pico_sdk_import.cmake)
 
 project(${projectname} C CXX ASM)
 pico_sdk_init()
-
-if (NOT HW_CONFIG)
-    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
-endif()
-include("pico_shared/BoardConfigs.cmake")
-
 add_executable(${projectname}
     main.cpp
     splash.cpp
