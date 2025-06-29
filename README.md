@@ -28,7 +28,7 @@ Click on image below to see a demo video.
 
 ## Save Game Support for SMS Games
 
-This update adds save game functionality for Sega Master System (SMS) games that support it.
+This update adds save game functionality [for Sega Master System (SMS) games that support it](https://consolemods.org/wiki/Master_System:List_of_Master_System_Games_with_Save_Batteries).
 
 ### How It Works
 
