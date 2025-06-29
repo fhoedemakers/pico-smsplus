@@ -18,7 +18,7 @@ project(${projectname} C CXX ASM)
 pico_sdk_init()
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 2 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 include("pico_shared/BoardConfigs.cmake")
 
