@@ -205,7 +205,6 @@ void system_load_sram(void)
 {
     char pad[FF_MAX_LFN];
     FILINFO fno;
-    bool ok = false;
     char fileName[FF_MAX_LFN];
     strcpy(fileName, Frens::GetfileNameFromFullPath(romName));
     Frens::stripextensionfromfilename(fileName);
@@ -251,7 +250,6 @@ void system_load_sram(void)
         {
             printf("Savefile read from disk %d bytes\n", bytesRead);
             sms.save = 1;
-            ok = true;
         }
         else
         {
@@ -353,8 +351,7 @@ static DWORD prevOtherButtons[2]{};
 #define NESPAD_A (0x01)
 #define NESPAD_B (0x02)
 
-static int rapidFireMask[2]{};
-static int rapidFireCounter = 0;
+
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
