@@ -28,7 +28,7 @@ Click on image below to see a demo video.
 
 ## Save Game Support for SMS Games
 
-This update adds save game functionality [for Sega Master System (SMS) games that support it](https://consolemods.org/wiki/Master_System:List_of_Master_System_Games_with_Save_Batteries).
+[For Sega Master System (SMS) games that support it](https://consolemods.org/wiki/Master_System:List_of_Master_System_Games_with_Save_Batteries), progress can be saved to SD card.
 
 ### How It Works
 
@@ -37,7 +37,7 @@ This update adds save game functionality [for Sega Master System (SMS) games tha
 - **Auto-Loading**: When you start a game, its corresponding `.SAV` file will be loaded automatically (if available).
 
 >[!NOTE]
->Make sure to return to the menu before powering off or switching games, or the save data may be lost.
+>Make sure to return to the menu before powering off, or the save data may be lost.
 
 ***
 
