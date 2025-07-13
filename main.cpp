@@ -532,8 +532,7 @@ int main()
     sleep_ms(500);
     printf("Starting Master System Emulator\n");
     printf("CPU freq: %d\n", clock_get_hz(clk_sys));
-    printf("Starting Tinyusb subsystem\n");
-    tusb_init();
+ 
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM);
     bool showSplash = true;
     while (true)
