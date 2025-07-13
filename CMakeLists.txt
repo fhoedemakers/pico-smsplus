@@ -18,13 +18,17 @@ if (NOT HW_CONFIG)
 endif()
 include("pico_shared/BoardConfigs.cmake")
 if (NOT PICO_BOARD )
-    set(PICO_BOARD pico2 CACHE STRING "Board type")
+    set(PICO_BOARD pico CACHE STRING "Board type")
     message("PICO_BOARD not set, using default: ${PICO_BOARD}")
 endif()
-include(pico_sdk_import.cmake)
-
+add_definitions( -DNDEBUG )
+include(${PICO_SDK_PATH}/lib/tinyusb/hw/bsp/family_support.cmake)
 project(${projectname} C CXX ASM)
-pico_sdk_init()
+# NOTE: pico_sdk_import.cmake is imported by family_initialize_project()
+#       family_initialize_project() also calls pico_sdk_init().
+#       latest master branch of pico-sdk is required for PIO USB support.
+family_initialize_project(${projectname} ${CMAKE_CURRENT_LIST_DIR})
+
 add_executable(${projectname}
     main.cpp
     splash.cpp
@@ -43,16 +47,8 @@ else()
 endif()
 pico_enable_stdio_usb(${projectname} 0)
 
-# tinyusb
-set(FAMILY rp2040)
-set(BOARD pico_sdk)
-set(TINYUSB_DEBUG_LEVE 0)
-include(${PICO_TINYUSB_PATH}/hw/bsp/${FAMILY}/family.cmake)
-if (PICO_SDK_VERSION_MAJOR LESS 2)
-    family_configure_target(${projectname})
-else()
-    family_configure_target(${projectname} "" )
-endif()
+family_configure_target(${projectname} "" )
+
 # add_compile_definitions(CFG_TUSB_DEBUG=0)
 set(SMS_FLAGS -DMB_SMS -DLSB_FIRST=0
         -DSMS_FILE_ADDR=0x10080000 -DNDEBUG
@@ -60,13 +56,12 @@ set(SMS_FLAGS -DMB_SMS -DLSB_FIRST=0
 target_compile_definitions(${projectname} PUBLIC 
     ${SMS_FLAGS}
     DVICONFIG=${DVICONFIG}
-    USE_OLD_SDDRIVER=${USE_OLD_SDDRIVER}
     SDCARD_PIN_CS=${SD_CS}
     SDCARD_PIN_SCK=${SD_SCK}
     SDCARD_PIN_MOSI=${SD_MOSI}
     SDCARD_PIN_MISO=${SD_MISO}
-    SDCARD_PIO=pio1        # when USE_OLD_SDDRIVER = 1
-    SDCARD_SPI=${SD_SPI}   # when USE_OLD_SDDRIVER = 0
+    SDCARD_PIO=pio1        # Fallback when SPI initialization fails
+    SDCARD_SPI=${SD_SPI}  
     NES_PIN_CLK=${NES_CLK}
     NES_PIN_DATA=${NES_DATA}
     NES_PIN_LAT=${NES_LAT}
@@ -80,8 +75,27 @@ target_compile_definitions(${projectname} PUBLIC
     LED_GPIO_PIN=${LED_GPIO_PIN}
     HW_CONFIG=${HW_CONFIG}
     WIIPAD_I2C=${WIIPAD_I2C}
+    USE_I2S_AUDIO=${USE_I2S_AUDIO}
+    PICO_AUDIO_I2S_DATA_PIN=${PICO_AUDIO_I2S_DATA_PIN}
+    PICO_AUDIO_I2S_CLOCK_PIN_BASE=${PICO_AUDIO_I2S_CLOCK_PIN_BASE}
+    PICO_AUDIO_I2S_PIO=${PICO_AUDIO_I2S_PIO}
+    PICO_AUDIO_I2S_DMA_IRQ=1
+    PICO_AUDIO_I2S_CLOCK_PINS_SWAPPED=${PICO_AUDIO_I2S_CLOCK_PINS_SWAPPED}
+    CFG_TUH_RPI_PIO_USB=${ENABLE_PIO_USB} # Enable PIO USB support
+    PIO_USB_USE_PIO=${PIO_USB_USE_PIO} # Use PIO for USB
+    PSRAM_CS_PIN=${PSRAM_CS_PIN} # Select the GPIO pin for PSRAM chip select
 )
-    
+if (ENABLE_PIO_USB EQUAL 1)
+    # if PIO_DP_PLUS_PIN = -1, then use the default PIO USB DP pin from the board config.
+    if ( NOT  PIO_DP_PLUS_PIN EQUAL -1 )
+        message(STATUS "Using PIO USB DP pin: ${PIO_DP_PLUS_PIN}")
+        target_compile_definitions(${projectname} PRIVATE
+        PICO_DEFAULT_PIO_USB_DP_PIN=${PIO_DP_PLUS_PIN} # Use the specified pin for PIO USB DP
+        )
+    endif()
+    message("Adding target link libraries for PIO USB support.")
+    target_link_libraries(${projectname} PRIVATE tinyusb_pico_pio_usb)
+endif()    
 target_link_libraries(${projectname}
 PRIVATE
     smscore
@@ -121,6 +135,7 @@ add_subdirectory(pico_lib/dvi)
 add_subdirectory(pico_lib/util)
 add_subdirectory(pico_shared)
 add_subdirectory(tusb_xinput xinput_host)
+target_link_options(${projectname} PRIVATE -Xlinker --print-memory-usage --data-sections)
 pico_add_extra_outputs(${projectname})
 
 
