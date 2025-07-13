@@ -128,7 +128,7 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
         }
         printf("Romsize %x = %d bytes\n", romsize, *size);
 #if PICO_RP2350 && PSRAM_CS_PIN
-        // If PSRAM is used, get the actual size of the allocated block
+        // If PSRAM is used, get the actual size of the allocated block to determine the actual size of the rom.
         if (Frens::isPsramEnabled())
         {
             printf("PSRAM enabled, getting size of allocated block\n");
@@ -657,7 +657,9 @@ int main()
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg"); // never returns, but reboots upon selecting a game
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom); 
+            // returns only when PSRAM is enabled,
+            printf("Selected rom from menu: %s\n", selectedRom);
         }
         reset = false;
         fileSize = 0;
