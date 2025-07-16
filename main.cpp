@@ -215,9 +215,28 @@ void in_ram(processaudio)(int offset)
             // works also : int l = (*p1++ + *p2++) / 2;
             int r = *p2++;
             // int l = *wave1++;
+#if EXT_AUDIO_IS_ENABLED 
+            if (settings.useExtAudio)
+            {            
+                // uint32_t sample32 = (l << 16) | (r & 0xFFFF);
+                EXT_AUDIO_ENQUEUE_SAMPLE(l, r);
+            }
+            else
+            {
+                *p++ = {static_cast<short>(l), static_cast<short>(r)};
+            }
+#else 
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
+#endif
         }
+#if EXT_AUDIO_IS_ENABLED
+        if (!settings.useExtAudio)
+        {
+            ring.advanceWritePointer(n);
+        }
+#else 
         ring.advanceWritePointer(n);
+#endif
         samples -= n;
     }
 }
@@ -570,6 +589,23 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 system_save_sram();
                 reset = true;
                 printf("Reset pressed\n");
+            }
+            if ( pushed & INPUT_LEFT) {
+#if EXT_AUDIO_IS_ENABLED
+                settings.useExtAudio = !settings.useExtAudio;
+                if (settings.useExtAudio)
+                {
+                    printf("Using I2S Audio\n");
+                }
+                else
+                {
+                    printf("Using DVIAudio\n");
+                }
+               
+#else 
+                settings.useExtAudio = 0;
+#endif
+                Frens::savesettings();
             }
         }
         if (p1 & INPUT_START)
