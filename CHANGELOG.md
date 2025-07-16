@@ -29,6 +29,7 @@ For the latest two player PCB 2.0, you need:
 - Added -s option to bld.sh to allow an alternative GPIO pin for PSRAM chip select.
 - Added support for [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107). (Uses hardware configuration 2, which is also used for breadboard and PCB). No extra binary needed.
 - In some configurations, a second USB port can be added. This port can be used to connect a gamepad. The built-in usb port will be used for power and flashing the firmware. With this there is no need to use a USB-Y cable anymore. For more info, see [pio_usb.md](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/pio_usb.md). You have to build the firmware from source to enable this feature. The pre-built binaries do not support this.
+- Enable I2S audio on the Pimoroni Pico DV Demo Base. This allows audio output through external speakers connected to the line-out jack of the Pimoroni Pico DV Demo Base. You can toggle audio output to this jack with SELECT + LEFT. Thanks to [Layer812](https://github.com/Layer812) for testing and providing feedback.
 
 > [!NOTE]
 > Some low USB speed devices like keyboards do not work properly when connected to the second USB port. See https://github.com/sekigon-gonnoc/Pico-PIO-USB/issues/18
