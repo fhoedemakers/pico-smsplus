@@ -34,6 +34,8 @@ For the latest two player PCB 2.0, you need:
 > [!NOTE]
 > Some low USB speed devices like keyboards do not work properly when connected to the second USB port. See https://github.com/sekigon-gonnoc/Pico-PIO-USB/issues/18
 
+## Fixes
+- Fix crash in my_chdir that may occur on RP2040 boards.
 
 # v0.18 Release Notes
 
