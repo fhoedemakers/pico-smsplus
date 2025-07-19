@@ -23,7 +23,7 @@
 
 #include "shared.h"
 #include "mytypes.h"
-
+#include "PicoPlusPsram.h"
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
@@ -59,6 +59,125 @@ WORD SMSPaletteRGB444[64] = {
 namespace
 {
     constexpr uint32_t CPUFreqKHz = 252000;
+}
+#define HEADER_OFFSET 0x7FF0
+#define HEADER_SIZE 16
+
+struct SegaHeader
+{
+    // 0x7FF0
+    char signature[8];
+    // 0x7FF8
+    uint16_t reserverd;
+    // 0x7FFA
+    uint16_t checksum;
+    // 0x7FFC
+    uint8_t product_code[2];
+    // 0x7FFE
+    uint8_t ProductCodeAndVersion;
+    // 0x7FFF
+    uint8_t sizeAndRegion;
+} *header;
+bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
+{
+    char *rom = (char *)addr;
+    int actualSize = 0;
+    header = (SegaHeader *)(rom + HEADER_OFFSET);
+    if (strncmp(header->signature, "TMR SEGA", 8) == 0)
+    {
+        printf("Sega header found\n");
+       
+        uint8_t romsize = header->sizeAndRegion & 0b00001111;
+        uint8_t region = (header->sizeAndRegion >> 4) & 0b00001111;
+        // https://www.smspower.org/Development/ROMHeader
+        switch (romsize)
+        {
+        case 0:                 // 256KB
+            *size = 512 * 1024; // 512KB and 1MB Roms are reported in the header as 256KB.
+                                // Setting Rom size to 512KB also works for 256KB roms.
+            break;              // Setting rom size to 1MB for 256 or 512KB games does not work.
+                                // Only a small set of roms are 1MB.
+        case 1:
+            *size = 512 * 1024;
+            break;
+        case 2:
+            *size = 1024 * 1024;
+            break;
+        case 0xa:
+            *size = 8 * 1024;
+            break;
+        case 0xb:
+            *size = 16 * 1024;
+            break;
+        case 0xc:
+            *size = 32 * 1024;
+            break;
+        case 0xd:
+            *size = 48 * 1024;
+            break;
+        case 0xe:
+            *size = 64 * 1024;
+            break;
+        case 0xf:
+            *size = 128 * 1024;
+            break;
+        default:
+            printf("Unknown romsize %x\n", romsize);
+            *size = 0; // unknown size
+            break;
+        }
+        printf("Romsize %x = %d bytes\n", romsize, *size);
+#if PICO_RP2350 && PSRAM_CS_PIN
+        // If PSRAM is used, get the actual size of the allocated block to determine the actual size of the rom.
+        if (Frens::isPsramEnabled())
+        {
+            printf("PSRAM enabled, getting size of allocated block\n");
+            PicoPlusPsram &psram_ = PicoPlusPsram::getInstance();
+            printf("Size in rom: %d bytes, ", *size);
+            *size = psram_.GetSize((void *)rom);
+            printf("actual size in PSRAM: %d bytes\n", *size);
+            printf("Setting rom size to %d bytes\n", *size);
+        }
+#endif
+      
+        *isGameGear = false;
+       
+        printf("Region: %x - ", region);
+        switch (region)
+        {
+        case 3:
+            printf("SMS Japan\n");
+            *isGameGear = false;
+            break;
+        case 4:
+            printf("SMS Export\n");
+            *isGameGear = false;
+            break;
+        case 5:
+            printf("GG USA\n");
+            *isGameGear = true;
+            break;
+        case 6:
+            printf("GG Export\n");
+            *isGameGear = true;
+            break;
+        case 7:
+            printf("GG International\n");
+            *isGameGear = true;
+            break;
+        default:
+            printf("Unknown\n");
+            break;
+        }
+    }
+    if (*size > 0)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 int sampleIndex = 0;
@@ -96,9 +215,28 @@ void in_ram(processaudio)(int offset)
             // works also : int l = (*p1++ + *p2++) / 2;
             int r = *p2++;
             // int l = *wave1++;
+#if EXT_AUDIO_IS_ENABLED 
+            if (settings.useExtAudio)
+            {            
+                // uint32_t sample32 = (l << 16) | (r & 0xFFFF);
+                EXT_AUDIO_ENQUEUE_SAMPLE(l, r);
+            }
+            else
+            {
+                *p++ = {static_cast<short>(l), static_cast<short>(r)};
+            }
+#else 
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
+#endif
         }
+#if EXT_AUDIO_IS_ENABLED
+        if (!settings.useExtAudio)
+        {
+            ring.advanceWritePointer(n);
+        }
+#else 
         ring.advanceWritePointer(n);
+#endif
         samples -= n;
     }
 }
@@ -215,7 +353,7 @@ void system_load_sram(void)
     FRESULT fr;
 
     size_t bytesRead;
-    if ( !sms.sram )
+    if (!sms.sram)
     {
         snprintf(ErrorMessage, ERRORMESSAGESIZE, "sms.sram is NULL, cannot load SRAM");
         printf("%s\n", ErrorMessage);
@@ -351,7 +489,6 @@ static DWORD prevOtherButtons[2]{};
 #define NESPAD_A (0x01)
 #define NESPAD_B (0x02)
 
-
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
@@ -453,6 +590,23 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 reset = true;
                 printf("Reset pressed\n");
             }
+            if ( pushed & INPUT_LEFT) {
+#if EXT_AUDIO_IS_ENABLED
+                settings.useExtAudio = !settings.useExtAudio;
+                if (settings.useExtAudio)
+                {
+                    printf("Using I2S Audio\n");
+                }
+                else
+                {
+                    printf("Using DVIAudio\n");
+                }
+               
+#else 
+                settings.useExtAudio = 0;
+#endif
+                Frens::savesettings();
+            }
         }
         if (p1 & INPUT_START)
         {
@@ -509,14 +663,14 @@ void in_ram(process)(void)
         ProcessAfterFrameIsRendered();
     }
 }
-
+static  char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
 /// RelWithDebugInfo mode.
 /// @return
 int main()
 {
-    char selectedRom[FF_MAX_LFN];
+   
     romName = selectedRom;
     ErrorMessage[0] = selectedRom[0] = 0;
 
@@ -532,31 +686,50 @@ int main()
     sleep_ms(500);
     printf("Starting Master System Emulator\n");
     printf("CPU freq: %d\n", clock_get_hz(clk_sys));
-    printf("Starting Tinyusb subsystem\n");
-    tusb_init();
+
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM);
     bool showSplash = true;
     while (true)
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg"); // never returns, but reboots upon selecting a game
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom); 
+            // returns only when PSRAM is enabled,
+            printf("Selected rom from menu: %s\n", selectedRom);
         }
         reset = false;
-        FRESULT fr;
-        FIL file;
-        fr = f_open(&file, selectedRom, FA_READ);
-        if (fr != FR_OK)
+        fileSize = 0;
+        isGameGear = false;
+        if (Frens::isPsramEnabled())
         {
-            snprintf(ErrorMessage, 40, "Cannot open rom %d", fr);
-            printf("%s\n", ErrorMessage);
-            selectedRom[0] = 0;
-            continue;
+            // Detect rom type from memory
+            // This is used to determine the rom size and type (SMS or GG)
+            detect_rom_type_from_memory(ROM_FILE_ADDR, &fileSize, &isGameGear);
+            if (fileSize == 0)
+            {
+                // No rom loaded, continue to menu
+                printf("No rom loaded, continuing to menu\n");
+                selectedRom[0] = 0;
+                continue;
+            }
         }
-        fileSize = f_size(&file);
-        f_close(&file);
-        isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
-        printf("Now playing: %s (%d bytes)\n", selectedRom, fileSize);
+        else
+        {
+            FRESULT fr;
+            FIL file;
+            fr = f_open(&file, selectedRom, FA_READ);
+            if (fr != FR_OK)
+            {
+                snprintf(ErrorMessage, 40, "Cannot open rom %d", fr);
+                printf("%s\n", ErrorMessage);
+                selectedRom[0] = 0;
+                continue;
+            }
+            fileSize = f_size(&file);
+            f_close(&file);
+            isGameGear = Frens::cstr_endswith(selectedRom, ".gg");
+            printf("Now playing: %s (%d bytes)\n", selectedRom, fileSize);
+        }
         if (isGameGear)
         {
             printf("Game Gear rom detected\n");
