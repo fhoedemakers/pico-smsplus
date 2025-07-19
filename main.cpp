@@ -663,14 +663,14 @@ void in_ram(process)(void)
         ProcessAfterFrameIsRendered();
     }
 }
-
+static  char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
 /// RelWithDebugInfo mode.
 /// @return
 int main()
 {
-    char selectedRom[FF_MAX_LFN];
+   
     romName = selectedRom;
     ErrorMessage[0] = selectedRom[0] = 0;
 
