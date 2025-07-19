@@ -71,6 +71,14 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 
 - [Adafruit Metro RP2350](https://www.adafruit.com/product/6003) or [Adafruit Metro RP2350 with PSRAM](https://www.adafruit.com/product/6267)
 
+- [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107)
+
+  Use the breadboard config for this. Should also work on the Pimoroni Pico DV Demo base, but currently untested. This board does not fit the PCB because of the SP/CE connector on back of the board.
+  The PSRAM on the board is used in stead of flash to load the roms from SD.
+
+## Waveshare RP2040 & RP2350 Zero
+
+An additional PCB design for Waveshare RP2040 & RP2350 Zero including case design by DynaMight1124 based around cheaper but harder to solder components for those that fancy a bigger challenge. It also allows the design to be smaller.
 
 ***
 
@@ -113,7 +121,12 @@ Gamepad buttons:
 - B (X): Back to parent folder.
 - START: Starts game currently loaded in flash.
 
-***
+The colors in the menu can be changed and saved:
+  - Select + Up/Down changes the foreground color.
+  - Select + Left/Right changes the background color.
+  - Select + A saves the colors. Screen will flicker when saved.
+  - Select + B resets the colors to default. (Black on white)
+
 
 ## Emulator (in game)
 Gamepad buttons:
@@ -121,6 +134,35 @@ Gamepad buttons:
 - SELECT + UP/SELECT + DOWN: switches screen modes.
 - SELECT + A/B: toggle rapid-fire.
 - START + A : Toggle framerate display.
+- SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
+
+When using an USB-Keyboard:
+- Cursor keys: Up, Down, left, right
+- Z: Back to parent folder
+- X: Open Folder/flash and start a game
+- S: Starts game currently loaded in flash.
+- A: acts as the select button.
+
+## Emulator (in game)
+Gamepad buttons:
+- SELECT + START, Xbox button: Resets back to the SD Card menu. Game saves are saved to the SD card.
+- SELECT + UP/SELECT + DOWN: switches screen modes.
+- SELECT + A/B: toggle rapid-fire.
+- START + A : Toggle framerate display
+- SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
+
+When using a Genesis Mini controller, press C for SELECT.
+
+When using an USB-Keyboard
+- Cursor keys: up, down, left, right
+- A: Select
+- S: Start
+- Z: B
+- X: A
+
+>[!NOTE]
+> The standard NES style layout is used for all controller types. So when using XInput controllers, B and A are swapped.
+
 
 ***
 
