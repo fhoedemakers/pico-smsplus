@@ -343,34 +343,59 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
     // Audio needs to be processed per scanline
-
     processaudio(line);
     // Adjust line number to center the emulator display
     line += MARGINTOP;
     // Only render lines that are visible on the screen, keeping into account top and bottom margins
     if (line < MARGINTOP || line >= 240 - MARGINBOTTOM)
         return;
-#if !HSTX
-    auto b = dvi_->getLineBuffer();
     uint16_t *sbuffer;
-    if (buffer)
+    uint16_t *currentLineBuf = nullptr;
+    dvi::DVI::LineBuffer *b{};
+#if !HSTX
+#if FRAMEBUFFERISPOSSIBLE
+    if (Frens::isFrameBufferUsed())
     {
-        uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
-        for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+        currentLineBuf = &Frens::framebuffer[line * 320];
+        sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
+        if (buffer)
         {
-            sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+            for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+            {
+                sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+            }
+        }
+        else
+        {
+            __builtin_memset(currentLineBuf, 0, 512);
         }
     }
     else
     {
-        sbuffer = b->data() + 32;
-        __builtin_memset(sbuffer, 0, 512);
+#endif
+        b = dvi_->getLineBuffer();
+        currentLineBuf = b->data();
+        if (buffer)
+        {
+            uint16_t *sbuffer = b->data() + 32 + (IS_GG ? 48 : 0);
+            for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+            {
+                sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+            }
+        }
+        else
+        {
+            sbuffer = b->data() + 32;
+            __builtin_memset(sbuffer, 0, 512);
+        }
+#endif
+#if FRAMEBUFFERISPOSSIBLE
     }
 #endif
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
     {
-        WORD *fpsBuffer = b->data() + 40;
+        WORD *fpsBuffer = currentLineBuf + 40;
         int rowInChar = line % 8;
         for (auto i = 0; i < 2; i++)
         {
@@ -390,9 +415,19 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             }
         }
     }
+
 #if !HSTX
-    dvi_->setLineBuffer(line, b);
+#if FRAMEBUFFERISPOSSIBLE
+    if (!Frens::isFrameBufferUsed())
+    {
 #endif
+        assert(currentLineBuffer_);
+        dvi_->setLineBuffer(line, b);
+#if FRAMEBUFFERISPOSSIBLE
+    }
+#endif
+#endif
+    return;
 }
 
 void system_load_sram(void)
@@ -505,6 +540,7 @@ void system_save_state()
 
 int ProcessAfterFrameIsRendered()
 {
+    Frens::PaceFrames60fps(false);
 #if NES_PIN_CLK != -1
     nespad_read_start();
 #endif
@@ -531,6 +567,10 @@ int ProcessAfterFrameIsRendered()
         fpsString[0] = '0' + (fps / 10);
         fpsString[1] = '0' + (fps % 10);
     }
+#if !HSTX
+#else
+    // hstx_waitForVSync();
+#endif
     return count;
 }
 
@@ -745,7 +785,7 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-     printf("==========================================================================================\n");
+    printf("==========================================================================================\n");
     printf("Pico-InfoSMS+ %s\n", SWVERSION);
     printf("Build date: %s\n", __DATE__);
     printf("Build time: %s\n", __TIME__);
@@ -821,6 +861,9 @@ int main()
         system_shutdown();
         selectedRom[0] = 0;
         showSplash = false;
+#if ENABLE_VU_METER
+        turnOffAllLeds();
+#endif
     }
 
     return 0;
