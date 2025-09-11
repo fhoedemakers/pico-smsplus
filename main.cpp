@@ -20,10 +20,11 @@
 #include "FrensHelpers.h"
 #include "settings.h"
 #include "FrensFonts.h"
-
+#include "vumeter.h"
 #include "shared.h"
 #include "mytypes.h"
 #include "PicoPlusPsram.h"
+
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
@@ -32,6 +33,17 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
+
+// Note: When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
+#if PICO_RP2350
+#define AUDIOBUFFERSIZE 1024
+#else
+#define AUDIOBUFFERSIZE 256
+#endif
+
+#define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
+static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
+
 #define fpsfgcolor 0;     // black
 #define fpsbgcolor 0xFFF; // white
 
@@ -46,7 +58,9 @@ bool reset = false;
 // The Sega Master system color palette converted to RGB444
 // so it can be used with the DVI library.
 // from https://segaretro.org/Palette
-WORD SMSPaletteRGB444[64] = {
+#if !HSTX
+// RGB444 format
+WORD SMSPaletteRGB[64] = {
     0x0, 0x500, 0xA00, 0xF00, 0x50, 0x550, 0xA50, 0xF50,
     0xA0, 0x5A0, 0xAA0, 0xFA0, 0xF0, 0x5F0, 0xAF0, 0xFF0,
     0x5, 0x505, 0xA05, 0xF05, 0x55, 0x555, 0xA55, 0xF55,
@@ -55,11 +69,18 @@ WORD SMSPaletteRGB444[64] = {
     0xAA, 0x5AA, 0xAAA, 0xFAA, 0xFA, 0x5FA, 0xAFA, 0xFFA,
     0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
     0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF};
-
-namespace
-{
-    constexpr uint32_t CPUFreqKHz = 252000;
-}
+#else
+// RGB555 format
+WORD SMSPaletteRGB[64] = {
+    0x0, 0x500, 0xA00, 0xF00, 0x50, 0x550, 0xA50, 0xF50,
+    0xA0, 0x5A0, 0xAA0, 0xFA0, 0xF0, 0x5F0, 0xAF0, 0xFF0,
+    0x5, 0x505, 0xA05, 0xF05, 0x55, 0x555, 0xA55, 0xF55,
+    0xA5, 0x5A5, 0xAA5, 0xFA5, 0xF5, 0x5F5, 0xAF5, 0xFF5,
+    0xA, 0x50A, 0xA0A, 0xF0A, 0x5A, 0x55A, 0xA5A, 0xF5A,
+    0xAA, 0x5AA, 0xAAA, 0xFAA, 0xFA, 0x5FA, 0xAFA, 0xFFA,
+    0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
+    0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF};
+#endif // HSTX
 #define HEADER_OFFSET 0x7FF0
 #define HEADER_SIZE 16
 
@@ -86,7 +107,7 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     if (strncmp(header->signature, "TMR SEGA", 8) == 0)
     {
         printf("Sega header found\n");
-       
+
         uint8_t romsize = header->sizeAndRegion & 0b00001111;
         uint8_t region = (header->sizeAndRegion >> 4) & 0b00001111;
         // https://www.smspower.org/Development/ROMHeader
@@ -139,9 +160,9 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
             printf("Setting rom size to %d bytes\n", *size);
         }
 #endif
-      
+
         *isGameGear = false;
-       
+
         printf("Region: %x - ", region);
         switch (region)
         {
@@ -184,7 +205,6 @@ int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
     int samples = 4; // 735/192 = 3.828125 192*4=768 735/3=245
-
     if (offset == (IS_GG ? 24 : 0))
     {
         sampleIndex = 0;
@@ -199,6 +219,7 @@ void in_ram(processaudio)(int offset)
     }
     short *p1 = snd.buffer[0] + sampleIndex;
     short *p2 = snd.buffer[1] + sampleIndex;
+#if !HSTX
     while (samples)
     {
         auto &ring = dvi_->getAudioRingBuffer();
@@ -215,9 +236,9 @@ void in_ram(processaudio)(int offset)
             // works also : int l = (*p1++ + *p2++) / 2;
             int r = *p2++;
             // int l = *wave1++;
-#if EXT_AUDIO_IS_ENABLED 
+#if EXT_AUDIO_IS_ENABLED
             if (settings.useExtAudio)
-            {            
+            {
                 // uint32_t sample32 = (l << 16) | (r & 0xFFFF);
                 EXT_AUDIO_ENQUEUE_SAMPLE(l, r);
             }
@@ -225,7 +246,7 @@ void in_ram(processaudio)(int offset)
             {
                 *p++ = {static_cast<short>(l), static_cast<short>(r)};
             }
-#else 
+#else
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
 #endif
         }
@@ -234,11 +255,28 @@ void in_ram(processaudio)(int offset)
         {
             ring.advanceWritePointer(n);
         }
-#else 
+#else
         ring.advanceWritePointer(n);
 #endif
         samples -= n;
     }
+#else
+    for (i = 0; i < samples; i++)
+    {
+        int l = *p1++; // (*p1++ << 16) + *p2++;
+        // works also : int l = (*p1++ + *p2++) / 2;
+        int r = *p2++;
+        // int l = *wave1++;
+        // int r = l;
+        EXT_AUDIO_ENQUEUE_SAMPLE(l, r);
+#if ENABLE_VU_METER
+        if (settings.flags.enableVUMeter)
+        {
+            addSampleToVUMeter(l);
+        }
+#endif
+    }
+#endif
 }
 
 extern "C" void in_ram(sms_palette_syncGG)(int index)
@@ -247,34 +285,49 @@ extern "C" void in_ram(sms_palette_syncGG)(int index)
     int r = ((vdp.cram[(index << 1) | 0] >> 1) & 7) << 5;
     int g = ((vdp.cram[(index << 1) | 0] >> 5) & 7) << 5;
     int b = ((vdp.cram[(index << 1) | 1] >> 1) & 7) << 5;
-
+#if !HSTX
     int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
     int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
     int b444 = ((b << 4) + 127) >> 8;
     palette444[index] = (r444 << 8) | (g444 << 4) | b444;
+#else
+    int r555 = ((r << 5) + 127) >> 8; // equivalent to (r888 * 31 + 127) / 255
+    int g555 = ((g << 5) + 127) >> 8; // equivalent to (g888 * 31 + 127) / 255
+    int b555 = ((b << 5) + 127) >> 8;
+
+    palette444[index] = (r555 << 10) | (g555 << 5) | b555;
+#endif
+    return;
 }
 
 extern "C" void in_ram(sms_palette_sync)(int index)
 {
-#if 1
+#if 0
     // Get SMS palette color index from CRAM
     WORD r = ((vdp.cram[index] >> 0) & 3);
     WORD g = ((vdp.cram[index] >> 2) & 3);
     WORD b = ((vdp.cram[index] >> 4) & 3);
     WORD tableIndex = b << 4 | g << 2 | r;
     // Get the RGB444 color from the SMS RGB444 palette
-    palette444[index] = SMSPaletteRGB444[tableIndex];
+    palette444[index] = SMSPaletteRGB[tableIndex];
 #endif
-
-#if 0
+#if 1
     // Alternative color rendering below
     WORD r = ((vdp.cram[index] >> 0) & 3) << 6;
     WORD g = ((vdp.cram[index] >> 2) & 3) << 6;
     WORD b = ((vdp.cram[index] >> 4) & 3) << 6;
+
+#if !HSTX
     int r444 = ((r << 4) + 127) >> 8; // equivalent to (r888 * 15 + 127) / 255
     int g444 = ((g << 4) + 127) >> 8; // equivalent to (g888 * 15 + 127) / 255
     int b444 = ((b << 4) + 127) >> 8;
     palette444[index] = (r444 << 8) | (g444 << 4) | b444;
+#else
+    int r555 = ((r << 5) + 127) >> 8; // equivalent to (r888 * 31 + 127) / 255
+    int g555 = ((g << 5) + 127) >> 8; // equivalent to (g888 * 31 + 127) / 255
+    int b555 = ((b << 5) + 127) >> 8;
+    palette444[index] = (r555 << 10) | (g555 << 5) | b555;
+#endif
 #endif
     return;
 }
@@ -297,7 +350,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // Only render lines that are visible on the screen, keeping into account top and bottom margins
     if (line < MARGINTOP || line >= 240 - MARGINBOTTOM)
         return;
-
+#if !HSTX
     auto b = dvi_->getLineBuffer();
     uint16_t *sbuffer;
     if (buffer)
@@ -313,6 +366,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         sbuffer = b->data() + 32;
         __builtin_memset(sbuffer, 0, 512);
     }
+#endif
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
     {
@@ -336,7 +390,9 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             }
         }
     }
+#if !HSTX
     dvi_->setLineBuffer(line, b);
+#endif
 }
 
 void system_load_sram(void)
@@ -452,7 +508,12 @@ int ProcessAfterFrameIsRendered()
 #if NES_PIN_CLK != -1
     nespad_read_start();
 #endif
-    auto count = dvi_->getFrameCounter();
+    auto count =
+#if !HSTX
+        dvi_->getFrameCounter();
+#else
+        hstx_getframecounter();
+#endif
     auto onOff = hw_divider_s32_quotient_inlined(count, 60) & 1;
     Frens::blinkLed(onOff);
 #if NES_PIN_CLK != -1
@@ -590,7 +651,8 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 reset = true;
                 printf("Reset pressed\n");
             }
-            if ( pushed & INPUT_LEFT) {
+            if (pushed & INPUT_LEFT)
+            {
 #if EXT_AUDIO_IS_ENABLED
                 settings.useExtAudio = !settings.useExtAudio;
                 if (settings.useExtAudio)
@@ -601,9 +663,9 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 {
                     printf("Using DVIAudio\n");
                 }
-               
-#else 
-                settings.useExtAudio = 0;
+
+#else
+                settings.flags.useExtAudio = 0;
 #endif
                 Frens::savesettings();
             }
@@ -663,14 +725,14 @@ void in_ram(process)(void)
         ProcessAfterFrameIsRendered();
     }
 }
-static  char selectedRom[FF_MAX_LFN];
+static char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
 /// RelWithDebugInfo mode.
 /// @return
 int main()
 {
-   
+
     romName = selectedRom;
     ErrorMessage[0] = selectedRom[0] = 0;
 
@@ -683,17 +745,27 @@ int main()
     set_sys_clock_khz(CPUFreqKHz, true);
 
     stdio_init_all();
-    sleep_ms(500);
+     printf("==========================================================================================\n");
+    printf("Pico-InfoSMS+ %s\n", SWVERSION);
+    printf("Build date: %s\n", __DATE__);
+    printf("Build time: %s\n", __TIME__);
+    printf("CPU freq: %d kHz\n", clock_get_hz(clk_sys) / 1000);
+    printf("Stack size: %d bytes\n", PICO_STACK_SIZE);
+    printf("==========================================================================================\n");
+    printf("Starting up...\n");
     printf("Starting Master System Emulator\n");
     printf("CPU freq: %d\n", clock_get_hz(clk_sys));
 
-    isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM);
+    // Note:
+    //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
+    //     - Top and bottom margins are reset to zero
+    isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
     bool showSplash = true;
     while (true)
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom); 
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom, "SMS");
             // returns only when PSRAM is enabled,
             printf("Selected rom from menu: %s\n", selectedRom);
         }
