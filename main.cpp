@@ -201,6 +201,21 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     }
 }
 
+void processaudioPerFrame()
+{
+    for (int i = 0; i < 735; i++)
+    {
+        short l = snd.buffer[0][i];
+        short r = snd.buffer[1][i];
+        EXT_AUDIO_ENQUEUE_SAMPLE(l >> 2, r >> 2);
+#if ENABLE_VU_METER
+        if (settings.flags.enableVUMeter)
+        {
+            addSampleToVUMeter(l);
+        }
+#endif
+    }
+}
 int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
@@ -237,7 +252,7 @@ void in_ram(processaudio)(int offset)
             int r = *p2++;
             // int l = *wave1++;
 #if EXT_AUDIO_IS_ENABLED
-            if (settings.useExtAudio)
+            if (settings.flags.useExtAudio)
             {
                 // uint32_t sample32 = (l << 16) | (r & 0xFFFF);
                 EXT_AUDIO_ENQUEUE_SAMPLE(l, r);
@@ -251,7 +266,7 @@ void in_ram(processaudio)(int offset)
 #endif
         }
 #if EXT_AUDIO_IS_ENABLED
-        if (!settings.useExtAudio)
+        if (!settings.flags.useExtAudio)
         {
             ring.advanceWritePointer(n);
         }
@@ -261,7 +276,7 @@ void in_ram(processaudio)(int offset)
         samples -= n;
     }
 #else
-    for (i = 0; i < samples; i++)
+    for (int i = 0; i < samples; i++)
     {
         int l = *p1++; // (*p1++ << 16) + *p2++;
         // works also : int l = (*p1++ + *p2++) / 2;
@@ -342,8 +357,19 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // gg : Line starts at line 24
     // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
-    // Audio needs to be processed per scanline
+    // Audio needs to be processed per scanline or per frame when 
+    // HSTX is enabled or when using external audio   
+#if !HSTX
+#if EXT_AUDIO_IS_ENABLED
+    // i2s_audio will be output per frame if external audio is enabled
+    if (settings.flags.useExtAudio == 0)
+    {
+        processaudio(line);
+    }
+#else
     processaudio(line);
+#endif
+#endif
     // Adjust line number to center the emulator display
     line += MARGINTOP;
     // Only render lines that are visible on the screen, keeping into account top and bottom margins
@@ -351,8 +377,8 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         return;
     uint16_t *sbuffer;
     uint16_t *currentLineBuf = nullptr;
-    dvi::DVI::LineBuffer *b{};
 #if !HSTX
+    dvi::DVI::LineBuffer *b{};
 #if FRAMEBUFFERISPOSSIBLE
     if (Frens::isFrameBufferUsed())
     {
@@ -388,9 +414,25 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             sbuffer = b->data() + 32;
             __builtin_memset(sbuffer, 0, 512);
         }
+#else
+    currentLineBuf = hstx_getlineFromFramebuffer(line);
+    sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
+    if (buffer)
+    {
+        for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+        {
+            sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+        }
+    }
+    else
+    {
+        __builtin_memset(currentLineBuf, 0, 512);
+    }
 #endif
+#if !HSTX
 #if FRAMEBUFFERISPOSSIBLE
     }
+#endif
 #endif
     // Display frame rate
     if (fps_enabled && line >= FPSSTART && line < FPSEND)
@@ -592,6 +634,9 @@ static DWORD prevOtherButtons[2]{};
 
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
+#if ENABLE_VU_METER
+    bool toggleVUMeter = false;
+#endif
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
 
@@ -693,9 +738,10 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             }
             if (pushed & INPUT_LEFT)
             {
-#if EXT_AUDIO_IS_ENABLED
-                settings.useExtAudio = !settings.useExtAudio;
-                if (settings.useExtAudio)
+                // Toggle audio output, ignore if HSTX is enabled, because HSTX must use external audio
+#if EXT_AUDIO_IS_ENABLED && !HSTX
+                settings.flags.useExtAudio = !settings.flags.useExtAudio;
+                if (settings.flags.useExtAudio)
                 {
                     printf("Using I2S Audio\n");
                 }
@@ -720,11 +766,25 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             }
             if (pushed & INPUT_UP)
             {
-                Frens::screenMode(-1);
+#if !HSTX
+                scaleMode8_7_ = Frens::screenMode(-1);
+#else
+                Frens::toggleScanLines();
+#endif
             }
             else if (pushed & INPUT_DOWN)
             {
-                Frens::screenMode(+1);
+#if !HSTX
+                scaleMode8_7_ = Frens::screenMode(+1);
+#else
+                Frens::toggleScanLines();
+#endif
+            }
+            else if (pushed && INPUT_RIGHT)
+            {
+#if ENABLE_VU_METER
+                toggleVUMeter = true;
+#endif
             }
         }
         prevButtons[i] = smsbuttons;
@@ -753,6 +813,15 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     {
         *pdwSystem = smssystem[0] | smssystem[1];
     }
+#if ENABLE_VU_METER
+    if (toggleVUMeter || isVUMeterToggleButtonPressed())
+    {
+        settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+        Frens::savesettings();
+        // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+        turnOffAllLeds();
+    }
+#endif
 }
 
 void in_ram(process)(void)
@@ -762,6 +831,16 @@ void in_ram(process)(void)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
+#if !HSTX        
+#if EXT_AUDIO_IS_ENABLED
+        if (settings.flags.useExtAudio == 1)
+        {
+            processaudioPerFrame();
+        }
+#endif
+#else
+        processaudioPerFrame();
+#endif
         ProcessAfterFrameIsRendered();
     }
 }
