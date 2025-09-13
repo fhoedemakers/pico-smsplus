@@ -872,8 +872,6 @@ int main()
     printf("Stack size: %d bytes\n", PICO_STACK_SIZE);
     printf("==========================================================================================\n");
     printf("Starting up...\n");
-    printf("Starting Master System Emulator\n");
-    printf("CPU freq: %d\n", clock_get_hz(clk_sys));
 
     // Note:
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
