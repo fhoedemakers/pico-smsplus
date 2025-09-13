@@ -14,7 +14,7 @@ message("* Current build type is : ${CMAKE_BUILD_TYPE}")
 
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 10 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 8 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if (NOT USE_HSTX)
     set(USE_HSTX 1 CACHE STRING "Use HSTX for display output when possible")
@@ -84,6 +84,9 @@ target_compile_definitions(${projectname} PUBLIC
     PICO_AUDIO_I2S_PIO=${PICO_AUDIO_I2S_PIO}
     PICO_AUDIO_I2S_DMA_IRQ=1
     PICO_AUDIO_I2S_CLOCK_PINS_SWAPPED=${PICO_AUDIO_I2S_CLOCK_PINS_SWAPPED}
+    PICO_AUDIO_I2S_RESET_PIN=${PICO_AUDIO_I2S_RESET_PIN} # Reset pin for TLV320 codec
+    PICO_AUDIO_I2S_INTERRUPT_PIN=${PICO_AUDIO_I2S_INTERRUPT_PIN}
+    PICO_AUDIO_I2S_INTERRUPT_IS_BUTTON=${PICO_AUDIO_I2S_INTERRUPT_IS_BUTTON}
     CFG_TUH_RPI_PIO_USB=${ENABLE_PIO_USB} # Enable PIO USB support
     PIO_USB_USE_PIO=${PIO_USB_USE_PIO} # Use PIO for USB
     PSRAM_CS_PIN=${PSRAM_CS_PIN} # Select the GPIO pin for PSRAM chip select
