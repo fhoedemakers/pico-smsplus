@@ -201,9 +201,40 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     }
 }
 
-void processaudioPerFrame()
+#if !HSTX
+#define DVILOGDROPPEDSAMPLES 0
+static void inline processaudioPerFrameDVI()
 {
-    for (int i = 0; i < 735; i++)
+    auto &ring = dvi_->getAudioRingBuffer();
+    int totalSamples = snd.bufsize;
+    int written = 0;
+
+    while (written < totalSamples) {
+        int n = std::min<int>(totalSamples - written, ring.getWritableSize());
+        if (n == 0) {
+#if DVILOGDROPPEDSAMPLES
+            static int dropped = 0;
+            dropped += (totalSamples - written);
+            if (dropped % 100 == 0) {
+                printf("DVI audio buffer full, dropping samples! Total dropped: %d\n", dropped);
+            }
+#endif
+            break; // Buffer full, can't write more
+        }
+        auto p = ring.getWritePointer();
+        for (int i = 0; i < n; ++i) {
+            int l = snd.buffer[0][written + i];
+            int r = snd.buffer[1][written + i];
+            *p++ = {static_cast<short>(l), static_cast<short>(r)};
+        }
+        ring.advanceWritePointer(n);
+        written += n;
+    }
+}
+#endif // !HSTX
+static void inline processaudioPerFrameI2S()
+{
+    for (int i = 0; i < snd.bufsize; i++)
     {
         short l = snd.buffer[0][i];
         short r = snd.buffer[1][i];
@@ -216,6 +247,8 @@ void processaudioPerFrame()
 #endif
     }
 }
+// Don't process audio per line, but per frame
+#if 0
 int sampleIndex = 0;
 void in_ram(processaudio)(int offset)
 {
@@ -293,6 +326,7 @@ void in_ram(processaudio)(int offset)
     }
 #endif
 }
+#endif
 
 extern "C" void in_ram(sms_palette_syncGG)(int index)
 {
@@ -357,8 +391,8 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // gg : Line starts at line 24
     // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
-    // Audio needs to be processed per scanline or per frame when 
-    // HSTX is enabled or when using external audio   
+    // Audio processing is per frame, not per line 
+#if 0
 #if !HSTX
 #if EXT_AUDIO_IS_ENABLED
     // i2s_audio will be output per frame if external audio is enabled
@@ -368,6 +402,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     }
 #else
     processaudio(line);
+#endif
 #endif
 #endif
     // Adjust line number to center the emulator display
@@ -835,12 +870,16 @@ void in_ram(process)(void)
 #if EXT_AUDIO_IS_ENABLED
         if (settings.flags.useExtAudio == 1)
         {
-            processaudioPerFrame();
+            processaudioPerFrameI2S();
+        } else {
+            processaudioPerFrameDVI();
         }
+#else
+        processaudioPerFrameDVI();
 #endif
 #else
-        processaudioPerFrame();
-#endif
+        processaudioPerFrameI2S();
+#endif  // !HSTX
         ProcessAfterFrameIsRendered();
     }
 }
