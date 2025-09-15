@@ -59,6 +59,7 @@ bool reset = false;
 // The Sega Master system color palette converted to RGB444
 // so it can be used with the DVI library.
 // from https://segaretro.org/Palette
+#if 0
 #if !HSTX
 // RGB444 format
 WORD SMSPaletteRGB[64] = {
@@ -82,6 +83,8 @@ WORD SMSPaletteRGB[64] = {
     0xF, 0x50F, 0xA0F, 0xF0F, 0x5F, 0x55F, 0xA5F, 0xF5F,
     0xAF, 0x5AF, 0xAAF, 0xFAF, 0xFF, 0x5FF, 0xAFF, 0xFFF};
 #endif // HSTX
+#endif
+
 #define HEADER_OFFSET 0x7FF0
 #define HEADER_SIZE 16
 
