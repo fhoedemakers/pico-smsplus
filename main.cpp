@@ -34,12 +34,13 @@ static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
 
-// Note: When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
-#if PICO_RP2350
+// DVI Note: When using framebuffer or render audio per frame, AUDIOBUFFERSIZE must be increased to 1024
+// #if PICO_RP2350
+// #define AUDIOBUFFERSIZE 1024
+// #else
+// #define AUDIOBUFFERSIZE 512
+// #endif
 #define AUDIOBUFFERSIZE 1024
-#else
-#define AUDIOBUFFERSIZE 256
-#endif
 
 #define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
