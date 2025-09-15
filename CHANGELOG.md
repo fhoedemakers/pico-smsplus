@@ -89,9 +89,6 @@ When you launch the game again, the corresponding save file will be loaded autom
 Binaries for each configuration are listed below. Binaries for Pico(2) also work for Pico(2)-w. No blinking led however on the -w boards.
 For some configurations risc-v binaries are available. It is recommended however to use the arm binaries. 
 
->[!NOTE]
-> No dedicated binaries are provided for the Pico w or Pico 2w. Instead, use the Pico or Pico 2 binaries. Enabling the LED on these boards causes too many issues. [#136](https://github.com/fhoedemakers/pico-infonesPlus/issues/136) 
-
 ### Standalone boards
 
 | Board | Binary | Readme | |
@@ -164,6 +161,7 @@ PCB: [Gerber_PicoNES_Mini_PCB_v1.0.zip](https://github.com/fhoedemakers/pico-sms
 
 
 Extract the zip file to the root folder of the SD card. Select a game in the menu and press START to show more information and box art. Works for most official released games. Screensaver shows floating random cover art.
+
 
 
 
