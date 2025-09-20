@@ -29,12 +29,14 @@ struct {
     char reg[64];
 } ym2413;
 
+void *frens_f_malloc(size_t size);
+void frens_f_free(void *ptr);
 void system_init(int rate) {
 
     // initialize memory
-    cachePtr = (int16 *)malloc(512 * 4 * sizeof(int16));
-    cacheStore = (uint8 *)malloc(CACHEDTILES * 64 * sizeof(uint8));
-    cacheStoreUsed = (uint8 *)malloc(CACHEDTILES * sizeof(uint8));
+    cachePtr = (int16 *)frens_f_malloc(512 * 4 * sizeof(int16));
+    cacheStore = (uint8 *)frens_f_malloc(CACHEDTILES * 64 * sizeof(uint8));
+    cacheStoreUsed = (uint8 *)frens_f_malloc(CACHEDTILES * sizeof(uint8));
     if (!cachePtr || !cacheStore || !cacheStoreUsed) {
         printf("Failed to allocate memory for cache\n");
         exit(1);
@@ -76,8 +78,8 @@ void audio_init(int rate) {
     snd.bufsize = (rate / 60);
 
     /* Sound output */
-    snd.buffer[0] = (signed short int *) malloc(snd.bufsize * 2);
-    snd.buffer[1] = (signed short int *) malloc(snd.bufsize * 2);
+    snd.buffer[0] = (signed short int *) frens_f_malloc(snd.bufsize * 2);
+    snd.buffer[1] = (signed short int *) frens_f_malloc(snd.bufsize * 2);
     if (!snd.buffer[0] || !snd.buffer[1]) return;
     __builtin_memset(snd.buffer[0], 0, snd.bufsize * 2);
     __builtin_memset(snd.buffer[1], 0, snd.bufsize * 2);
@@ -111,9 +113,11 @@ void audio_init(int rate) {
 void system_shutdown(void) {
      // free memory
      printf("Free memory\n");
-    free(cachePtr);
-    free(cacheStore);
-    free(cacheStoreUsed);
+    frens_f_free(cachePtr);
+    frens_f_free(cacheStore);
+    frens_f_free(cacheStoreUsed);
+    frens_f_free(snd.buffer[0]);
+    frens_f_free(snd.buffer[1]);
     if (snd.enabled) {
 //        OPLL_delete(opll);
 //        OPLL_close();

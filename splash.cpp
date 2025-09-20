@@ -26,26 +26,36 @@ void splash()
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 5, s, fgcolorSplash, bgcolorSplash);
    
     strcpy(s, "Pico Port");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 9, s, fgcolorSplash, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 7, s, fgcolorSplash, bgcolorSplash);
     strcpy(s, "@frenskefrens");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 10, s, CBLUE, bgcolorSplash);
-
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 8, s, CBLUE, bgcolorSplash);
+#if !HSTX
     strcpy(s, "DVI Support");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 13, s, fgcolorSplash, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 11, s, fgcolorSplash, bgcolorSplash);
     strcpy(s, "@shuichi_takano");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 14, s, CBLUE, bgcolorSplash);
-
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 12, s, CBLUE, bgcolorSplash);
+#else
+    strcpy(s, "HSTX video driver & I2S audio");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 11, s, fgcolorSplash, bgcolorSplash);
+    strcpy(s, "@frenskefrens");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 12, s, CBLUE, bgcolorSplash);
+#endif
     strcpy(s, "(S)NES/WII controller support");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 17, s, fgcolorSplash, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 15, s, fgcolorSplash, bgcolorSplash);
 
     strcpy(s, "@PaintYourDragon @adafruit");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 18, s, CBLUE, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 16, s, CBLUE, bgcolorSplash);
 
     strcpy(s, "PCB Design");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 21, s, fgcolorSplash, bgcolorSplash);
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 19, s, fgcolorSplash, bgcolorSplash);
 
-    strcpy(s, "@johnedgarpark");
-    putText(SCREEN_COLS / 2 - strlen(s) / 2, 22, s, CBLUE, bgcolorSplash);
+    strcpy(s, "@johnedgarpark DynaMight");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 20, s, CBLUE, bgcolorSplash);
+
+    strcpy(s, "3D Case design,artwork & metadata");
+    putText(2, 22, s, fgcolorSplash, bgcolorSplash);
+    strcpy(s, "DynaMight");
+    putText(SCREEN_COLS / 2 - strlen(s) / 2, 23, s, CBLUE, bgcolorSplash);
 
     strcpy(s, "https://github.com/");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 25, s, CBLUE, bgcolorSplash);

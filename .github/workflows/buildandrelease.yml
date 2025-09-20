@@ -55,7 +55,12 @@ jobs:
             run: |            
                  chmod +x build*.sh bld.sh || exit 1
                  export PICO_SDK_PATH=$HOME/pico-sdk
+                 export PICO_PIO_USB_PATH=$HOME/Pico-PIO-USB
                  ./buildAll.sh
+                 
+          - name: Copy SMSPlusMetadata.zip to workspace
+            run: |
+              cp /datalocal/upload/pico-infonesPlus/SMSPlusMetadata.zip releases/SMSPlusMetadata.zip
 
           - name: Create release
             uses: softprops/action-gh-release@v2
@@ -64,7 +69,9 @@ jobs:
                 files: |
                        releases/*.uf2
                        PCB/pico_nesPCB_v2.1.zip  
-                       PCB/Gerber_PicoNES_Mini_PCB_v1.0.zip    
+                       PCB/Gerber_PicoNES_Mini_PCB_v1.0.zip
+                       PCB/Gerber_PicoNES_Micro_v1.2.zip
+                       releases/SMSPlusMetadata.zip   
                 body_path: CHANGELOG.md
           
          
