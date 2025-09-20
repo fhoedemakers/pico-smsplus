@@ -28,6 +28,7 @@
   - The built-in USB port is now dedicated to **power and firmware flashing**, removing the need for a USB-Y cable.  
   - Optional: when you solder the optional PSRAM chip on the board, the emulator will make use of it. Roms will be loaded much faster using PSRAM.
 
+- Added support for Waveshare RP2350-USBA with PCB. More info and build guide at: https://www.instructables.com/PicoNES-RaspberryPi-Pico-Based-NES-Emulator/
 - Added support for [Spotpear HDMI](https://spotpear.com/index/product/detail/id/1207.html) board.
 
 - **RP2350 Only** Framebuffer implemented in SRAM. This eliminates the red flicker during slow operations, such as SD card I/O.
@@ -142,6 +143,16 @@ PCB: [Gerber_PicoNES_Mini_PCB_v1.0.zip](https://github.com/fhoedemakers/pico-sms
 
 3D-printed case designs for PCB WS2XX0-Zero:
 [https://www.thingiverse.com/thing:7041536](https://www.thingiverse.com/thing:7041536)
+
+### PCB Waveshare RP2350-USBA with PCB
+[Binary](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_WaveShare2350USBA_arm_piousb.uf2)
+
+PCB: [Gerber_PicoNES_Micro_v1.2.zip](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/Gerber_PicoNES_Micro_v1.2.zip)
+
+[Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2350-usb-a)
+
+[Build guide](https://www.instructables.com/PicoNES-RaspberryPi-Pico-Based-NES-Emulator/)
+
 
 ### Pimoroni Pico DV
 
