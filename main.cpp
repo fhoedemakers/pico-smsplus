@@ -901,10 +901,7 @@ int main()
     int fileSize = 0;
     bool isGameGear = false;
 
-    // Set voltage and clock frequency
-    vreg_set_voltage(VREG_VOLTAGE_1_20);
-    sleep_ms(10);
-    set_sys_clock_khz(CPUFreqKHz, true);
+    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
 
     stdio_init_all();
     printf("==========================================================================================\n");
