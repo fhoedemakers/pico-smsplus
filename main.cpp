@@ -33,7 +33,8 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
-
+extern const unsigned char EmuOverlay_444[];
+extern const unsigned char EmuOverlay_555[];
 // DVI Note: When using framebuffer or render audio per frame, AUDIOBUFFERSIZE must be increased to 1024
 // #if PICO_RP2350
 // #define AUDIOBUFFERSIZE 1024
@@ -430,10 +431,10 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
                 sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
             }
         }
-        else
-        {
-            __builtin_memset(currentLineBuf, 0, 512);
-        }
+        // else
+        // {
+        //     __builtin_memset(currentLineBuf, 0, 512);
+        // }
     }
     else
     {
@@ -463,10 +464,10 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
     }
-    else
-    {
-        __builtin_memset(currentLineBuf, 0, 512);
-    }
+    // else
+    // {
+    //     __builtin_memset(currentLineBuf, 0, 512);
+    // }
 #endif
 #if !HSTX
 #if FRAMEBUFFERISPOSSIBLE
@@ -887,6 +888,53 @@ void in_ram(process)(void)
         ProcessAfterFrameIsRendered();
     }
 }
+
+void loadoverlay()
+{
+    if (!Frens::isFrameBufferUsed())
+    {
+        return;
+    }
+    char CRC[9];
+    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
+    static char PATH[FF_MAX_LFN + 1];
+    static char CHOSEN[FF_MAX_LFN + 1];
+    char *overlay =
+#if !HSTX
+        (char *)EmuOverlay_444;
+#else
+        (char *)EmuOverlay_555;
+#endif
+    ;
+    int fldIndex;
+    if (settings.flags.borderMode == DEFAULTBORDER)
+    {
+        Frens::loadOverLay(nullptr, overlay);
+        return;
+    }
+
+    if (settings.flags.borderMode == THEMEDBORDER)
+    {
+        snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
+        snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
+        printf("Loading bezel: %s\n", CHOSEN);
+    }
+    else
+    {
+        fldIndex = (rand() % strlen(borderdirs));
+        snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
+        printf("Scanning random folder: %s\n", PATH);
+        FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
+        if (fr != FR_OK)
+        {
+            printf("Failed to pick random file from %s: %d\n", PATH, fr);
+            Frens::loadOverLay(nullptr, overlay);
+            return;
+        }
+    }
+    Frens::loadOverLay(CHOSEN, overlay);
+}
+
 static char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
@@ -962,6 +1010,7 @@ int main()
         if (isGameGear)
         {
             printf("Game Gear rom detected\n");
+             loadoverlay();
         }
         else
         {
@@ -972,6 +1021,7 @@ int main()
         system_init(SMS_AUD_RATE);
         // load state if any
         // system_load_state();
+       
         system_reset();
         printf("Starting game\n");
         process();
