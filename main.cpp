@@ -33,8 +33,10 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
+#if PICO_RP2350
 extern const unsigned char EmuOverlay_444[];
 extern const unsigned char EmuOverlay_555[];
+#endif
 // DVI Note: When using framebuffer or render audio per frame, AUDIOBUFFERSIZE must be increased to 1024
 // #if PICO_RP2350
 // #define AUDIOBUFFERSIZE 1024
@@ -891,6 +893,7 @@ void in_ram(process)(void)
 
 void loadoverlay()
 {
+#if PICO_RP2350
     if (!Frens::isFrameBufferUsed())
     {
         return;
@@ -933,6 +936,7 @@ void loadoverlay()
         }
     }
     Frens::loadOverLay(CHOSEN, overlay);
+#endif
 }
 
 static char selectedRom[FF_MAX_LFN];
@@ -965,6 +969,9 @@ int main()
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
     //     - Top and bottom margins are reset to zero
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
+#if !HSTX
+    scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
+#endif
     bool showSplash = true;
     while (true)
     {
