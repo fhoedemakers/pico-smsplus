@@ -425,18 +425,14 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     if (Frens::isFrameBufferUsed())
     {
         currentLineBuf = &Frens::framebuffer[line * 320];
-        sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
+        sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 4);
         if (buffer)
         {
             for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
             {
-                sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
+                sbuffer[i  - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];     
             }
         }
-        // else
-        // {
-        //     __builtin_memset(currentLineBuf, 0, 512);
-        // }
     }
     else
     {
@@ -458,7 +454,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         }
 #else
     currentLineBuf = hstx_getlineFromFramebuffer(line);
-    sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
+    sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 4);
     if (buffer)
     {
         for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
@@ -466,10 +462,6 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
     }
-    // else
-    // {
-    //     __builtin_memset(currentLineBuf, 0, 512);
-    // }
 #endif
 #if !HSTX
 #if FRAMEBUFFERISPOSSIBLE
@@ -891,7 +883,7 @@ void in_ram(process)(void)
     }
 }
 
-void loadoverlay()
+void loadoverlay(bool isGameGear)
 {
 #if PICO_RP2350
     if (!Frens::isFrameBufferUsed())
@@ -902,39 +894,41 @@ void loadoverlay()
     static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
     static char PATH[FF_MAX_LFN + 1];
     static char CHOSEN[FF_MAX_LFN + 1];
-    char *overlay =
+    // only Game Gear has default overlay
+    char *overlay = isGameGear ?
 #if !HSTX
-        (char *)EmuOverlay_444;
+        (char *)EmuOverlay_444 :
 #else
-        (char *)EmuOverlay_555;
+        (char *)EmuOverlay_555 :
 #endif
-    ;
-    int fldIndex;
-    if (settings.flags.borderMode == DEFAULTBORDER)
-    {
-        Frens::loadOverLay(nullptr, overlay);
-        return;
-    }
+        nullptr;
+    // int fldIndex;
+    // if (settings.flags.borderMode == DEFAULTBORDER)
+    // {
+        
+    //     Frens::loadOverLay(nullptr, overlay);
+    //     return;
+    // }
 
-    if (settings.flags.borderMode == THEMEDBORDER)
-    {
-        snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
-        snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
-        printf("Loading bezel: %s\n", CHOSEN);
-    }
-    else
-    {
-        fldIndex = (rand() % strlen(borderdirs));
-        snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
-        printf("Scanning random folder: %s\n", PATH);
-        FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
-        if (fr != FR_OK)
-        {
-            printf("Failed to pick random file from %s: %d\n", PATH, fr);
-            Frens::loadOverLay(nullptr, overlay);
-            return;
-        }
-    }
+    // if (settings.flags.borderMode == THEMEDBORDER)
+    // {
+    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
+    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
+    printf("Loading bezel: %s\n", CHOSEN);
+    //}
+    // else
+    // {
+    //     fldIndex = (rand() % strlen(borderdirs));
+    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
+    //     printf("Scanning random folder: %s\n", PATH);
+    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
+    //     if (fr != FR_OK)
+    //     {
+    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
+    //         Frens::loadOverLay(nullptr, overlay);
+    //         return;
+    //     }
+    // }
     Frens::loadOverLay(CHOSEN, overlay);
 #endif
 }
@@ -1017,12 +1011,12 @@ int main()
         if (isGameGear)
         {
             printf("Game Gear rom detected\n");
-             loadoverlay();
         }
         else
         {
             printf("Master System rom detected\n");
         }
+        loadoverlay(isGameGear);
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
