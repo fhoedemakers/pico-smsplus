@@ -150,7 +150,6 @@ The colors in the menu can be changed and saved:
 Gamepad buttons:
 - SELECT + START: Resets back to the SD Card menu. Game saves (when available) are saved to the SD card.
 - SELECT + UP/SELECT + DOWN: switches screen modes.
-- SELECT + A/B: toggle rapid-fire.
 - START + A : Toggle framerate display.
 - SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
 
@@ -165,7 +164,6 @@ When using an USB-Keyboard:
 Gamepad buttons:
 - SELECT + START, Xbox button: Resets back to the SD Card menu. Game saves are saved to the SD card.
 - SELECT + UP/SELECT + DOWN: switches screen modes.
-- SELECT + A/B: toggle rapid-fire.
 - START + A : Toggle framerate display
 - SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
 
