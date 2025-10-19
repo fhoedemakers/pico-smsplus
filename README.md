@@ -112,7 +112,7 @@ The emulator supports two player games using two NES controllers or an USB gamec
 | No usb controller connected | NES port 1| NES port 2 |
 
 ***
-# Using metadata.
+## Using metadata.
 
 Download the metadata pack from the [releases page](https://github.com/fhoedemakers/pico-infonesPlus/releases/latest/download/PicoNesMetadata.zip) It contains box art, game info and themed borders/bezels for many games. The metadata is used in the menu to show box art and game info when a rom is selected.  When the screensaver is started, random box art is shown. When in-game, themed borders/bezels are shown around the game screen.
 - Download pack [here](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip).  
