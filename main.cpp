@@ -216,20 +216,24 @@ static void inline processaudioPerFrameDVI()
     int totalSamples = snd.bufsize;
     int written = 0;
 
-    while (written < totalSamples) {
+    while (written < totalSamples)
+    {
         int n = std::min<int>(totalSamples - written, ring.getWritableSize());
-        if (n == 0) {
+        if (n == 0)
+        {
 #if DVILOGDROPPEDSAMPLES
             static int dropped = 0;
             dropped += (totalSamples - written);
-            if (dropped % 100 == 0) {
+            if (dropped % 100 == 0)
+            {
                 printf("DVI audio buffer full, dropping samples! Total dropped: %d\n", dropped);
             }
 #endif
             break; // Buffer full, can't write more
         }
         auto p = ring.getWritePointer();
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i)
+        {
             int l = snd.buffer[0][written + i];
             int r = snd.buffer[1][written + i];
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
@@ -398,7 +402,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // gg : Line starts at line 24
     // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
-    // Audio processing is per frame, not per line 
+    // Audio processing is per frame, not per line
 #if 0
 #if !HSTX
 #if EXT_AUDIO_IS_ENABLED
@@ -430,7 +434,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         {
             for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
             {
-                sbuffer[i  - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];     
+                sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
             }
         }
     }
@@ -770,7 +774,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 reset = true;
                 printf("Reset pressed\n");
             }
-            if (pushed & INPUT_LEFT)
+            else if (pushed & INPUT_LEFT)
             {
                 // Toggle audio output, ignore if HSTX is enabled, because HSTX must use external audio
 #if EXT_AUDIO_IS_ENABLED && !HSTX
@@ -789,16 +793,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #endif
                 Frens::savesettings();
             }
-        }
-        if (p1 & INPUT_START)
-        {
-            // Toggle frame rate display
-            if (pushed & INPUT_BUTTON1)
-            {
-                fps_enabled = !fps_enabled;
-                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
-            }
-            if (pushed & INPUT_UP)
+            else if (pushed & INPUT_UP)
             {
 #if !HSTX
                 scaleMode8_7_ = Frens::screenMode(-1);
@@ -819,6 +814,15 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #if ENABLE_VU_METER
                 toggleVUMeter = true;
 #endif
+            }
+        }
+        if (p1 & INPUT_START)
+        {
+            // Toggle frame rate display
+            if (pushed & INPUT_BUTTON1)
+            {
+                fps_enabled = !fps_enabled;
+                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
             }
         }
         prevButtons[i] = smsbuttons;
@@ -865,12 +869,14 @@ void in_ram(process)(void)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
-#if !HSTX        
+#if !HSTX
 #if EXT_AUDIO_IS_ENABLED
         if (settings.flags.useExtAudio == 1)
         {
             processaudioPerFrameI2S();
-        } else {
+        }
+        else
+        {
             processaudioPerFrameDVI();
         }
 #else
@@ -878,7 +884,7 @@ void in_ram(process)(void)
 #endif
 #else
         processaudioPerFrameI2S();
-#endif  // !HSTX
+#endif // !HSTX
         ProcessAfterFrameIsRendered();
     }
 }
@@ -897,15 +903,17 @@ void loadoverlay(bool isGameGear)
     // only Game Gear has default overlay
     char *overlay = isGameGear ?
 #if !HSTX
-        (char *)EmuOverlay_444 :
+                               (char *)EmuOverlay_444
+                               :
 #else
-        (char *)EmuOverlay_555 :
+                               (char *)EmuOverlay_555
+                               :
 #endif
-        nullptr;
+                               nullptr;
     // int fldIndex;
     // if (settings.flags.borderMode == DEFAULTBORDER)
     // {
-        
+
     //     Frens::loadOverLay(nullptr, overlay);
     //     return;
     // }
@@ -1022,7 +1030,7 @@ int main()
         system_init(SMS_AUD_RATE);
         // load state if any
         // system_load_state();
-       
+
         system_reset();
         printf("Starting game\n");
         process();
