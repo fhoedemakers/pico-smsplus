@@ -112,6 +112,18 @@ The emulator supports two player games using two NES controllers or an USB gamec
 | No usb controller connected | NES port 1| NES port 2 |
 
 ***
+# Using metadata.
+
+Download the metadata pack from the [releases page](https://github.com/fhoedemakers/pico-infonesPlus/releases/latest/download/PicoNesMetadata.zip) It contains box art, game info and themed borders/bezels for many games. The metadata is used in the menu to show box art and game info when a rom is selected.  When the screensaver is started, random box art is shown. When in-game, themed borders/bezels are shown around the game screen.
+- Download pack [here](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip).  
+  - Extract the zip contents to the **root of the SD card**.  
+  - In the menu:  
+    - Highlight a game and press **START** → show cover art and metadata.  
+    - Press **SELECT** → show full game description.  
+    - Press **B** → return to menu.  
+    - Press **START** or **A** → start the game.
+
+***
 
 ## Menu Usage
 Gamepad buttons:
@@ -119,7 +131,7 @@ Gamepad buttons:
 - LEFT/RIGHT: next/previous page.
 - A (Circle): Open folder/flash and start game.
 - B (X): Back to parent folder.
-- START: Starts game currently loaded in flash.
+- START: Show metadata and box art (when available). 
 
 The colors in the menu can be changed and saved:
   - Select + Up/Down changes the foreground color.
@@ -140,7 +152,7 @@ When using an USB-Keyboard:
 - Cursor keys: Up, Down, left, right
 - Z: Back to parent folder
 - X: Open Folder/flash and start a game
-- S: Starts game currently loaded in flash.
+- S: Show metadata and box art (when available). 
 - A: acts as the select button.
 
 ## Emulator (in game)
