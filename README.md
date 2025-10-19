@@ -46,7 +46,7 @@ Click on image below to see a demo video.
 
 The binary specific for your config can be downloaded from the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
 
-You need a FAT32 formatted SD card to put your .sms and .gg roms on.
+You need a FAT32 or exFAT formatted SD card to put your .sms and .gg roms on.
 
 >[!NOTE]
 > For detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
