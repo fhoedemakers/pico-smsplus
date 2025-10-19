@@ -4,7 +4,8 @@
 This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System and Game Gear emulator for RP2040/RP2350 based microcontroller boards like the RaspberryPi Pico and Pico 2. Sound and video are ouput over HDMI.
 The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](https://github.com/shuichitakano/pico-infones) which in turn is based on [PicoDVI](https://github.com/Wren6991/PicoDVI).
 
-Put your Master System (.sms) and Game Gear (.gg) rom files on a FAT32 formatted SD card. You can organize the roms in directories. A menu is displayed on which you can select the rom to play.
+Create a FAT32 or exFAT formatted SD card and copy your Master System (.sms) and/or Game Gear (.gg) roms and optional [metadata](#using-metadata) on to it.
+You can organize the roms in directories. A menu is displayed on which you can select the rom to play.
 
 Supports two controllers for two player Master System games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
 
