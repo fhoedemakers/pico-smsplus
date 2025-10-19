@@ -7,6 +7,11 @@
 
 [See setup section in in Pico-infoNesPlus readme how to install and wire up](https://github.com/fhoedemakers/pico-infonesPlus#pico-setup)
 
+# v0.21 Release Notes
+
+- In-game hotkeys are now consistent with the other emulators. 
+- Themed borders/bezels are shown in-game. For this you need the latest metadata pack from the releases section. Download and unzip it's contents to the root of the SD card.
+
 # v0.20 Release Notes
 
 - Added support for [Adafruit Fruit Jam](https://www.adafruit.com/product/6200):  
