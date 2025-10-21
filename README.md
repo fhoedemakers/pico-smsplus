@@ -116,20 +116,7 @@ The emulator supports two player games using two NES controllers or an USB gamec
 | No usb controller connected | NES port 1| NES port 2 |
 
 ***
-## Using metadata.
 
-Download the metadata pack from the [releases page](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip) It contains box art, game info and themed borders/bezels for many games. The metadata is used in the menu to show box art and game info when a rom is selected.  When the screensaver is started, random box art is shown. When in-game, themed borders/bezels are shown around the game screen.
-- Download pack [here](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip).  
-  - Extract the zip contents to the **root of the SD card**.  
-  - In the menu:  
-    - Highlight a game and press **START** → show cover art and metadata.  
-    - Press **SELECT** → show full game description.  
-    - Press **B** → return to menu.  
-    - Press **START** or **A** → start the game.
-
-<img width="1920" height="1080" alt="Screenshot 2025-10-19 14-57-45" src="https://github.com/user-attachments/assets/da91016f-093b-4b96-8d8e-5a0f37cf2506" />
-   
-<img width="1920" height="1080" alt="Screenshot 2025-10-19 14-57-33" src="https://github.com/user-attachments/assets/19db1e45-0cda-442f-ac1a-3b54b7ccfa84" />
 
 
 ***
@@ -174,6 +161,27 @@ Gamepad buttons:
   - Z: Button2
   - X: Button1
 
+## Using metadata.
+
+<img width="320" h alt="Screenshot 2025-10-19 14-57-45" src="https://github.com/user-attachments/assets/da91016f-093b-4b96-8d8e-5a0f37cf2506" />
+
+Download the metadata pack from the [releases page](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip) It contains box art, game info and themed borders/bezels for many games. The metadata is used in the menu to show box art and game info when a rom is selected.  When the screensaver is started, random box art is shown. When in-game, themed borders/bezels are shown around the game screen.
+
+> [!NOTE]
+> Only available for RP2350 based boards. RP2040 has not enough memory for metadata to be shown.
+
+- Download pack [here](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip).  
+  - Extract the zip contents to the **root of the SD card**.  
+  - In the menu:  
+    - Highlight a game and press **START** → show cover art and metadata.  
+    - Press **SELECT** → show full game description.  
+    - Press **Button1** → return to menu.  
+    - Press **START** or **Button2** → start the game.
+  - In-game: A themed bezel is shown:
+
+| Master System | Game Gear | 
+| ------------- | --------  |
+| <img width="320" alt="Screenshot 2025-10-19 14-57-33" src="https://github.com/user-attachments/assets/19db1e45-0cda-442f-ac1a-3b54b7ccfa84" /> | <img width="320" alt="Screenshot 2025-10-21 17-04-42" src="https://github.com/user-attachments/assets/8f9bed95-fea8-4ce8-aa1c-edcbeacb1945" /> |
 
 
 ***
@@ -195,8 +203,4 @@ The _debug.sh scripts can be use to create a debug build for each system.
 
 ***
 
-## Things to do (if possible):
-
-- [ ] Improve performance
-- [ ] Save states
 
