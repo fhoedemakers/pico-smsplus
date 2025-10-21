@@ -9,6 +9,8 @@ You can organize the roms in directories. A menu is displayed on which you can s
 
 Supports two controllers for two player Master System games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
 
+See the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page for the supported RP2040/RP2350 boards.
+
 ***
 
 ## Video
