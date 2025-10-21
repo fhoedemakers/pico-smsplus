@@ -116,9 +116,6 @@ The emulator supports two player games using two NES controllers or an USB gamec
 
 ***
 
-
-
-***
 # Gamepad and keyboard usage
 
 |     | (S)NES | Genesis | XInput | Dual Shock/Sense |
@@ -173,7 +170,7 @@ Download the metadata pack from the [releases page](https://github.com/fhoedemak
     - Press **SELECT** → show full game description.  
     - Press **Button1** → return to menu.  
     - Press **START** or **Button2** → start the game.
-  - RP2350-only: In-game: A themed bezel is shown:
+  - **RP2350-only**: In-game: A themed bezel is shown:
 
 | Master System | Game Gear | 
 | ------------- | --------  |
