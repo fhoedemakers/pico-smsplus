@@ -19,13 +19,12 @@ Click on image below to see a demo video.
 [![Video](https://img.youtube.com/vi/__E8h2Ay3g8/0.jpg)](https://www.youtube.com/watch?v=__E8h2Ay3g8)
 
 ***
-## Not perfect
+## RP2040 notes
 
-**There are still some issues to be fixed. The emulator runs decently well, especially on the Pico 2/RP2350. On the Pico/RP2040, Some games may not run at full speed or at all. (afterburner).**
+**The emulator works very well on the Pico 2/RP2350. On the Pico/RP2040, some games may not run at full speed or at all. (like afterburner).**
 
 >[!WARNING] 
 > On Pico/RP2040, some games show red flashing between screens. This can be occasionally or severe depending on the game. If you are sensitive for this, or experience health issues while playing those games, please stop playing immediately.
-> Runs much better on Pico 2/RP2350.
 
 ***
 
