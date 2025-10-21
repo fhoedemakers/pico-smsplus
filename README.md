@@ -92,6 +92,7 @@ The following controllers are supported.
 - SONY DUALSHOCK 4
 - SONY DualSense
 - Xinput type controllers (Xbox)
+- [Retro-bit 8 button Genesis-USB](https://www.retro-bit.com/controllers/genesis/#usb). 
 - and more...
 
 Also original NES and WII-classic controllers are supported in some configurations. 
