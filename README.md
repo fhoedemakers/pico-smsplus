@@ -133,7 +133,7 @@ Download the metadata pack from the [releases page](https://github.com/fhoedemak
 
 
 ***
-# Gamepad usage
+# Gamepad and keyboard usage
 
 |     | (S)NES | Genesis | XInput | Dual Shock/Sence |
 | --- | ------ | ------- | ------ | ---------------- |
@@ -141,7 +141,7 @@ Download the metadata pack from the [releases page](https://github.com/fhoedemak
 | Button2 | A  |    B    |   B    |   Circle         |
 | Select  | select | Mode or C | Select | Select     |
 
-## Menu Usage
+## In menu
 Gamepad buttons:
 - UP/DOWN: Next/previous item in the menu.
 - LEFT/RIGHT: next/previous page.
@@ -174,8 +174,6 @@ Gamepad buttons:
   - Z: Button2
   - X: Button1
 
->[!NOTE]
-> The standard NES style layout is used for all controller types. So when using XInput controllers, B and A are swapped.
 
 
 ***
