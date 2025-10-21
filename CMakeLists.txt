@@ -37,6 +37,8 @@ add_executable(${projectname}
     splash.cpp
     DefaultSS444.c
     DefaultSS555.c
+    EmuOverlay444.c
+    EmuOverlay555.c
 )
 
 pico_set_program_name(${projectname} "${projectname}")
