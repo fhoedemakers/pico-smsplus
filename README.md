@@ -166,9 +166,6 @@ Gamepad buttons:
 
 Download the metadata pack from the [releases page](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip) It contains box art, game info and themed borders/bezels for many games. The metadata is used in the menu to show box art and game info when a rom is selected.  When the screensaver is started, random box art is shown. When in-game, themed borders/bezels are shown around the game screen.
 
-> [!NOTE]
-> Only available for RP2350 based boards. RP2040 has not enough memory for metadata to be shown.
-
 - Download pack [here](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip).  
   - Extract the zip contents to the **root of the SD card**.  
   - In the menu:  
@@ -176,7 +173,7 @@ Download the metadata pack from the [releases page](https://github.com/fhoedemak
     - Press **SELECT** → show full game description.  
     - Press **Button1** → return to menu.  
     - Press **START** or **Button2** → start the game.
-  - In-game: A themed bezel is shown:
+  - RP2350-only: In-game: A themed bezel is shown:
 
 | Master System | Game Gear | 
 | ------------- | --------  |
