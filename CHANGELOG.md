@@ -10,7 +10,7 @@
 # v0.21 Release Notes
 
 - In-game hotkeys are now consistent with the other emulators. 
-- Themed borders/bezels are shown in-game. For this you need the latest [metadata pack](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip) from the releases section. Download and unzip it's contents to the root of the SD card.
+- On RP2350 based boards: Themed borders/bezels are shown in-game. For this you need the latest [metadata pack](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/SMSPlusMetadata.zip) from the releases section. Download and unzip it's contents to the root of the SD card.
 - Support for [Retro-bit 8 button Genesis-USB](https://www.retro-bit.com/controllers/genesis/#usb). 
 
 # v0.20 Release Notes
@@ -179,6 +179,7 @@ PCB: [Gerber_PicoNES_Micro_v1.2.zip](https://github.com/fhoedemakers/pico-smsplu
 
 Extract the zip file to the root folder of the SD card. Select a game in the menu and press START to show more information and box art. Works for most official released games. Screensaver shows floating random cover art. Works for RP2040 and RP2350.
 Extra on RP2350: when a game is loaded a themed bezel/border is shown.
+
 
 
 
