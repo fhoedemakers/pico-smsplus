@@ -33,7 +33,10 @@ static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
-
+#if PICO_RP2350
+extern const unsigned char EmuOverlay_444[];
+extern const unsigned char EmuOverlay_555[];
+#endif
 // DVI Note: When using framebuffer or render audio per frame, AUDIOBUFFERSIZE must be increased to 1024
 // #if PICO_RP2350
 // #define AUDIOBUFFERSIZE 1024
@@ -213,20 +216,24 @@ static void inline processaudioPerFrameDVI()
     int totalSamples = snd.bufsize;
     int written = 0;
 
-    while (written < totalSamples) {
+    while (written < totalSamples)
+    {
         int n = std::min<int>(totalSamples - written, ring.getWritableSize());
-        if (n == 0) {
+        if (n == 0)
+        {
 #if DVILOGDROPPEDSAMPLES
             static int dropped = 0;
             dropped += (totalSamples - written);
-            if (dropped % 100 == 0) {
+            if (dropped % 100 == 0)
+            {
                 printf("DVI audio buffer full, dropping samples! Total dropped: %d\n", dropped);
             }
 #endif
             break; // Buffer full, can't write more
         }
         auto p = ring.getWritePointer();
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i)
+        {
             int l = snd.buffer[0][written + i];
             int r = snd.buffer[1][written + i];
             *p++ = {static_cast<short>(l), static_cast<short>(r)};
@@ -395,7 +402,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     // gg : Line starts at line 24
     // sms: Line starts at line 0
     // Emulator loops from scanline 0 to 261
-    // Audio processing is per frame, not per line 
+    // Audio processing is per frame, not per line
 #if 0
 #if !HSTX
 #if EXT_AUDIO_IS_ENABLED
@@ -425,14 +432,10 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
         if (buffer)
         {
-            for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+            for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
             {
                 sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
             }
-        }
-        else
-        {
-            __builtin_memset(currentLineBuf, 0, 512);
         }
     }
     else
@@ -458,14 +461,10 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
     if (buffer)
     {
-        for (int i = screenCropX; i < BMP_WIDTH - screenCropX; i++)
+        for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
         {
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
-    }
-    else
-    {
-        __builtin_memset(currentLineBuf, 0, 512);
     }
 #endif
 #if !HSTX
@@ -775,7 +774,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 reset = true;
                 printf("Reset pressed\n");
             }
-            if (pushed & INPUT_LEFT)
+            else if (pushed & INPUT_LEFT)
             {
                 // Toggle audio output, ignore if HSTX is enabled, because HSTX must use external audio
 #if EXT_AUDIO_IS_ENABLED && !HSTX
@@ -794,16 +793,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #endif
                 Frens::savesettings();
             }
-        }
-        if (p1 & INPUT_START)
-        {
-            // Toggle frame rate display
-            if (pushed & INPUT_BUTTON1)
-            {
-                fps_enabled = !fps_enabled;
-                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
-            }
-            if (pushed & INPUT_UP)
+            else if (pushed & INPUT_UP)
             {
 #if !HSTX
                 scaleMode8_7_ = Frens::screenMode(-1);
@@ -824,6 +814,15 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #if ENABLE_VU_METER
                 toggleVUMeter = true;
 #endif
+            }
+        }
+        if (p1 & INPUT_START)
+        {
+            // Toggle frame rate display
+            if (pushed & INPUT_BUTTON1)
+            {
+                fps_enabled = !fps_enabled;
+                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
             }
         }
         prevButtons[i] = smsbuttons;
@@ -870,12 +869,14 @@ void in_ram(process)(void)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
-#if !HSTX        
+#if !HSTX
 #if EXT_AUDIO_IS_ENABLED
         if (settings.flags.useExtAudio == 1)
         {
             processaudioPerFrameI2S();
-        } else {
+        }
+        else
+        {
             processaudioPerFrameDVI();
         }
 #else
@@ -883,10 +884,63 @@ void in_ram(process)(void)
 #endif
 #else
         processaudioPerFrameI2S();
-#endif  // !HSTX
+#endif // !HSTX
         ProcessAfterFrameIsRendered();
     }
 }
+
+void loadoverlay(bool isGameGear)
+{
+#if PICO_RP2350
+    if (!Frens::isFrameBufferUsed())
+    {
+        return;
+    }
+    char CRC[9];
+    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
+    static char PATH[FF_MAX_LFN + 1];
+    static char CHOSEN[FF_MAX_LFN + 1];
+    // only Game Gear has default overlay
+    char *overlay = isGameGear ?
+#if !HSTX
+                               (char *)EmuOverlay_444
+                               :
+#else
+                               (char *)EmuOverlay_555
+                               :
+#endif
+                               nullptr;
+    // int fldIndex;
+    // if (settings.flags.borderMode == DEFAULTBORDER)
+    // {
+
+    //     Frens::loadOverLay(nullptr, overlay);
+    //     return;
+    // }
+
+    // if (settings.flags.borderMode == THEMEDBORDER)
+    // {
+    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
+    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
+    printf("Loading bezel: %s\n", CHOSEN);
+    //}
+    // else
+    // {
+    //     fldIndex = (rand() % strlen(borderdirs));
+    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
+    //     printf("Scanning random folder: %s\n", PATH);
+    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
+    //     if (fr != FR_OK)
+    //     {
+    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
+    //         Frens::loadOverLay(nullptr, overlay);
+    //         return;
+    //     }
+    // }
+    Frens::loadOverLay(CHOSEN, overlay);
+#endif
+}
+
 static char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
@@ -901,10 +955,7 @@ int main()
     int fileSize = 0;
     bool isGameGear = false;
 
-    // Set voltage and clock frequency
-    vreg_set_voltage(VREG_VOLTAGE_1_20);
-    sleep_ms(10);
-    set_sys_clock_khz(CPUFreqKHz, true);
+    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
 
     stdio_init_all();
     printf("==========================================================================================\n");
@@ -920,6 +971,9 @@ int main()
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
     //     - Top and bottom margins are reset to zero
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
+#if !HSTX
+    scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
+#endif
     bool showSplash = true;
     while (true)
     {
@@ -970,11 +1024,13 @@ int main()
         {
             printf("Master System rom detected\n");
         }
+        loadoverlay(isGameGear);
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any
         // system_load_state();
+
         system_reset();
         printf("Starting game\n");
         process();
