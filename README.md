@@ -181,18 +181,11 @@ Download the metadata pack from the [releases page](https://github.com/fhoedemak
 
 ## Building from source
 
-When using Visual Studio code, make sure to build in Release or RelWithDbinfo mode, as the emulator is too slow in the other modes.
+Use the bld.sh script to build the project. Build using Ubuntu Linux or WSL on Windows. See the Pico SDK installation instructions on how to set up the build environment.
 
-Build shell scripts are available:
+Use ./bld.sh --h for options.
 
-- build.sh : Builds .uf2 for the Pimoroni DV Deno Base
-- build_alternate.sh: For the PCB or breadboard variant
-- build_feather_dvi.sh: For the Adafruit feather
-- build_ws_rp2040_pizero.sh: For the Wavehare device
-
-Make sure they are executable by running `chmod +x build*.sh` in the terminal.
-
-The _debug.sh scripts can be use to create a debug build for each system.
+The resulting .uf2 file will be in the releases/ folder. Copy it to the Pico when in bootloader mode.
 
 ***
 
