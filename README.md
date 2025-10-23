@@ -117,7 +117,7 @@ The emulator supports two player games using two NES controllers or an USB gamec
 ***
 
 # Gamepad and keyboard usage
-
+Below the button mapping for different controllers. You can also use a USB-keyboard.
 |     | (S)NES | Genesis | XInput | Dual Shock/Sense |
 | --- | ------ | ------- | ------ | ---------------- |
 | Button1 | B  |    A    |   A    |    X             |
