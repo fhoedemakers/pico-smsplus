@@ -120,9 +120,11 @@ The emulator supports two player games using two NES controllers or an USB gamec
 Below the button mapping for different controllers. You can also use a USB-keyboard.
 |     | (S)NES | Genesis | XInput | Dual Shock/Sense |
 | --- | ------ | ------- | ------ | ---------------- |
-| Button1 | B  |    A    |   A    |    X             |
+| Button1 | B (*) |    A    |   A    |    X             |
 | Button2 | A  |    B    |   B    |   Circle         |
 | Select  | select | Mode or C | Select | Select     |
+
+(*) On SNES USB-controller press Y once to activate the B-button.
 
 ## In menu
 Gamepad buttons:
