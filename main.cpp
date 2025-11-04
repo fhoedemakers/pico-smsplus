@@ -791,7 +791,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #else
                 settings.flags.useExtAudio = 0;
 #endif
-                Frens::savesettings();
+                FrensSettings::savesettings();
             }
             else if (pushed & INPUT_UP)
             {
@@ -855,7 +855,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     if (toggleVUMeter || isVUMeterToggleButtonPressed())
     {
         settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-        Frens::savesettings();
+        FrensSettings::savesettings();
         // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
         turnOffAllLeds();
     }
@@ -966,7 +966,7 @@ int main()
     printf("Stack size: %d bytes\n", PICO_STACK_SIZE);
     printf("==========================================================================================\n");
     printf("Starting up...\n");
-
+    FrensSettings::initSettings(FrensSettings::emulators::SMS);
     // Note:
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
     //     - Top and bottom margins are reset to zero
