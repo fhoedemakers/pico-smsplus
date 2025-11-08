@@ -60,8 +60,8 @@ const uint8_t g_settings_visibility[MOPT_COUNT] = {
     1, // Font Back Color
     ENABLE_VU_METER, // VU Meter
     (HW_CONFIG == 8),  // Fruit Jam Internal Speaker
-    0, // DMG Palette (NES emulator does not use GameBoy palettes)
-    0, // Border Mode (Super Gameboy style borders not applicable for NES)
+    0, // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
+    0, // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
     0, // Frame Skip
    
 };
