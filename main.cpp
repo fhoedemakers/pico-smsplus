@@ -856,6 +856,15 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 Frens::toggleScanLines();
 #endif
             }
+#if ENABLE_VU_METER
+            else if (pushed & INPUT_RIGHT)
+            {
+                settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+                FrensSettings::savesettings();
+                // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+                turnOffAllLeds();
+            }
+#endif
         }
         if (p1 & INPUT_START)
         {
