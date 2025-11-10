@@ -7,6 +7,13 @@
 
 [See setup section in in Pico-infoNesPlus readme how to install and wire up](https://github.com/fhoedemakers/pico-infonesPlus#pico-setup)
 
+
+# v0.22 Rekease Notes
+
+- Settings are saved to /settings_sms.dat instead of /settings.dat. This allows to have separate settings files for different emulators (e.g. pico-infonesPlus and pico-peanutGB etc.).
+- Added a settings menu. Press SELECT in the main menu to open it and change settings instead of using in‑game button combos.
+- Switched to Fatfs R0.16.
+
 # v0.21 Release Notes
 
 - In-game hotkeys are now consistent with the other emulators. 
