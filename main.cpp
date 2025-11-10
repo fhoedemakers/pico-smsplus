@@ -24,12 +24,12 @@
 #include "shared.h"
 #include "mytypes.h"
 #include "PicoPlusPsram.h"
+#include "menu_settings.h"
 
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
 
-static bool fps_enabled = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
@@ -47,6 +47,39 @@ extern const unsigned char EmuOverlay_555[];
 
 #define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
+// Visibility configuration for options menu (NES specific)
+// 1 = show option line, 0 = hide.
+// Order must match enum in menu_options.h
+const uint8_t g_settings_visibility[MOPT_COUNT] = {
+    !HSTX, // Screen Mode (only when not HSTX)
+    HSTX,  // Scanlines toggle (only when HSTX)
+    1, // FPS Overlay
+    0, // Audio Enable
+    0, // Frame Skip
+    (EXT_AUDIO_IS_ENABLED && !HSTX), // External Audio
+    1, // Font Color
+    1, // Font Back Color
+    ENABLE_VU_METER, // VU Meter
+    (HW_CONFIG == 8),  // Fruit Jam Internal Speaker
+    0, // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
+    0, // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
+   
+   
+};
+const uint8_t g_available_screen_modes[] = {
+#if PICO_RP2350
+        0,   // SCANLINE_8_7, Does not work well with borders
+#else   
+        1,   // SCANLINE_8_7,
+#endif
+#if PICO_RP2350
+        0,  // NOSCANLINE_8_7, Does not work well with borders
+#else
+        1,  // NOSCANLINE_8_7,
+#endif
+        1,  // SCANLINE_1_1,
+        1   //NOSCANLINE_1_1
+};
 
 #define fpsfgcolor 0;     // black
 #define fpsbgcolor 0xFFF; // white
@@ -58,6 +91,11 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 #define FPSEND ((FPSSTART) + 8)
 
 bool reset = false;
+
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+// Cached Wii pad state updated once per frame in ProcessAfterFrameIsRendered()
+static uint16_t wiipad_raw_cached = 0;
+#endif
 
 // The Sega Master system color palette converted to RGB444
 // so it can be used with the DVI library.
@@ -473,7 +511,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 #endif
 #endif
     // Display frame rate
-    if (fps_enabled && line >= FPSSTART && line < FPSEND)
+    if (settings.flags.displayFrameRate && line >= FPSSTART && line < FPSEND)
     {
         WORD *fpsBuffer = currentLineBuf + 40;
         int rowInChar = line % 8;
@@ -638,7 +676,7 @@ int ProcessAfterFrameIsRendered()
     // nespad_read_finish(); // Sets global nespad_state var
     tuh_task();
     // Frame rate calculation
-    if (fps_enabled)
+    if (settings.flags.displayFrameRate)
     {
         // calculate fps and round to nearest value (instead of truncating/floor)
         uint32_t tick_us = Frens::time_us() - start_tick_us;
@@ -647,6 +685,19 @@ int ProcessAfterFrameIsRendered()
         fpsString[0] = '0' + (fps / 10);
         fpsString[1] = '0' + (fps % 10);
     }
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+    // Poll Wii pad once per frame (function called once per rendered frame)
+    wiipad_raw_cached = wiipad_read();
+#endif
+#if ENABLE_VU_METER
+        if (isVUMeterToggleButtonPressed())
+        {
+            settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+            FrensSettings::savesettings();
+            // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+            turnOffAllLeds();
+        }
+#endif
 #if !HSTX
 #else
     // hstx_waitForVSync();
@@ -672,9 +723,6 @@ static DWORD prevOtherButtons[2]{};
 
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
-#if ENABLE_VU_METER
-    bool toggleVUMeter = false;
-#endif
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
 
@@ -727,14 +775,14 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             if (i == 1)
             {
-                nespadbuttons |= wiipad_read();
+                nespadbuttons |= wiipad_raw_cached;
             }
         }
         else // if no USB controller is connected, wiipad acts as controller 1
         {
             if (i == 0)
             {
-                nespadbuttons |= wiipad_read();
+                nespadbuttons |= wiipad_raw_cached;
             }
         }
 #endif
@@ -809,20 +857,24 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 Frens::toggleScanLines();
 #endif
             }
-            else if (pushed && INPUT_RIGHT)
-            {
 #if ENABLE_VU_METER
-                toggleVUMeter = true;
-#endif
+            else if (pushed & INPUT_RIGHT)
+            {
+                settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+                FrensSettings::savesettings();
+                // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+                turnOffAllLeds();
             }
+#endif
         }
         if (p1 & INPUT_START)
         {
             // Toggle frame rate display
             if (pushed & INPUT_BUTTON1)
             {
-                fps_enabled = !fps_enabled;
-                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
+                settings.flags.displayFrameRate = !settings.flags.displayFrameRate;
+                printf("FPS: %s\n", settings.flags.displayFrameRate ? "ON" : "OFF");
+                FrensSettings::savesettings();
             }
         }
         prevButtons[i] = smsbuttons;
@@ -851,15 +903,6 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     {
         *pdwSystem = smssystem[0] | smssystem[1];
     }
-#if ENABLE_VU_METER
-    if (toggleVUMeter || isVUMeterToggleButtonPressed())
-    {
-        settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-        FrensSettings::savesettings();
-        // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
-        turnOffAllLeds();
-    }
-#endif
 }
 
 void in_ram(process)(void)
@@ -986,6 +1029,7 @@ int main()
         reset = false;
         fileSize = 0;
         isGameGear = false;
+        EXT_AUDIO_MUTE_INTERNAL_SPEAKER(settings.flags.fruitJamEnableInternalSpeaker == 0);
         if (Frens::isPsramEnabled())
         {
             // Detect rom type from memory
