@@ -133,13 +133,7 @@ Gamepad buttons:
 - Button2 : Open folder/flash and start game.
 - Button1 : Back to parent folder.
 - START: Show metadata and box art (when available). 
-
-The colors in the menu can be changed and saved:
-  - Select + Up/Down changes the foreground color.
-  - Select + Left/Right changes the background color.
-  - Select + Button2 saves the colors. Screen will flicker when saved.
-  - Select + Button1 resets the colors to default. (Black on white)
-
+- SELECT: Opens a setting menu. Here you can change settings like screen mode, scanlines, framerate display, menu colors and other board specific settings. Settings can also be changed in-game by pressing some button combinations as explained below.
 
 ## Emulator (in game)
 Gamepad buttons:
@@ -148,8 +142,8 @@ Gamepad buttons:
 - START + Button2 : Toggle framerate display
 - **Pimoroni Pico DV Demo Base only**: SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
 - **Fruit Jam Only** 
-  - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack.
-  - SELECT + UP: Toggle scanlines. 
+  - SELECT + UP: Toggle scanlines.
+  - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack. 
   - pushbutton 2 (on board) or SELECT + RIGHT: Toggles the VU meter on or off. (NeoPixel LEDs light up in sync with the music rhythm)
 - **Genesis Mini Controller**: When using a Genesis Mini 3 button controller, press C for SELECT. On the 8-button Genesis controllers, MODE acts as SELECT.
 - **USB-keyboard**: When using an USB-Keyboard
