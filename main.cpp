@@ -29,7 +29,8 @@
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
-
+bool showSettings = false;
+static bool isGameGear = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
@@ -51,20 +52,21 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // 1 = show option line, 0 = hide.
 // Order must match enum in menu_options.h
 const uint8_t g_settings_visibility[MOPT_COUNT] = {
-    !HSTX, // Screen Mode (only when not HSTX)
-    HSTX,  // Scanlines toggle (only when HSTX)
-    1, // FPS Overlay
-    0, // Audio Enable
-    0, // Frame Skip
+    0,                               // Exit Game, or back to menu. Always visible when in-game.
+    !HSTX,                           // Screen Mode (only when not HSTX)
+    HSTX,                            // Scanlines toggle (only when HSTX)
+    1,                               // FPS Overlay
+    0,                               // Audio Enable
+    0,                               // Frame Skip
     (EXT_AUDIO_IS_ENABLED && !HSTX), // External Audio
-    1, // Font Color
-    1, // Font Back Color
-    ENABLE_VU_METER, // VU Meter
-    (HW_CONFIG == 8),  // Fruit Jam Internal Speaker
-    0, // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
-    0, // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
-   
-   
+    1,                               // Font Color
+    1,                               // Font Back Color
+    ENABLE_VU_METER,                 // VU Meter
+    (HW_CONFIG == 8),                // Fruit Jam Internal Speaker
+    0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
+    0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
+    0,                               // Rapid Fire on A
+    0,                               // Rapid Fire on B
 };
 const uint8_t g_available_screen_modes[] = {
 #if PICO_RP2350
@@ -655,6 +657,57 @@ void system_save_state()
 {
     // TODO
 }
+void loadoverlay()
+{
+#if PICO_RP2350
+    if (!Frens::isFrameBufferUsed())
+    {
+        return;
+    }
+    char CRC[9];
+    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
+    static char PATH[FF_MAX_LFN + 1];
+    static char CHOSEN[FF_MAX_LFN + 1];
+    // only Game Gear has default overlay
+    char *overlay = isGameGear ?
+#if !HSTX
+                               (char *)EmuOverlay_444
+                               :
+#else
+                               (char *)EmuOverlay_555
+                               :
+#endif
+                               nullptr;
+    // int fldIndex;
+    // if (settings.flags.borderMode == DEFAULTBORDER)
+    // {
+
+    //     Frens::loadOverLay(nullptr, overlay);
+    //     return;
+    // }
+
+    // if (settings.flags.borderMode == THEMEDBORDER)
+    // {
+    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
+    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
+    printf("Loading bezel: %s\n", CHOSEN);
+    //}
+    // else
+    // {
+    //     fldIndex = (rand() % strlen(borderdirs));
+    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
+    //     printf("Scanning random folder: %s\n", PATH);
+    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
+    //     if (fr != FR_OK)
+    //     {
+    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
+    //         Frens::loadOverLay(nullptr, overlay);
+    //         return;
+    //     }
+    // }
+    Frens::loadOverLay(CHOSEN, overlay);
+#endif
+}
 
 int ProcessAfterFrameIsRendered()
 {
@@ -698,10 +751,16 @@ int ProcessAfterFrameIsRendered()
             turnOffAllLeds();
         }
 #endif
-#if !HSTX
-#else
-    // hstx_waitForVSync();
-#endif
+        if (showSettings)
+        {
+            int rval = showSettingsMenu(true);
+            if (rval == 3)
+            {
+                reset = true;
+            }
+            showSettings = false;
+            loadoverlay();
+        }
     return count;
 }
 
@@ -818,9 +877,10 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             if (pushedsystem & INPUT_START)
             {
-                system_save_sram();
-                reset = true;
-                printf("Reset pressed\n");
+                // system_save_sram();
+                // reset = true;
+                // printf("Reset pressed\n");
+                showSettings = true;
             }
             else if (pushed & INPUT_LEFT)
             {
@@ -899,6 +959,10 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     }
     input.system = *pdwSystem = smssystem[0] | smssystem[1];
     // return only on first push
+    if (reset)
+    {
+        system_save_sram();
+    }
     if (pushedsystem)
     {
         *pdwSystem = smssystem[0] | smssystem[1];
@@ -932,58 +996,6 @@ void in_ram(process)(void)
     }
 }
 
-void loadoverlay(bool isGameGear)
-{
-#if PICO_RP2350
-    if (!Frens::isFrameBufferUsed())
-    {
-        return;
-    }
-    char CRC[9];
-    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
-    static char PATH[FF_MAX_LFN + 1];
-    static char CHOSEN[FF_MAX_LFN + 1];
-    // only Game Gear has default overlay
-    char *overlay = isGameGear ?
-#if !HSTX
-                               (char *)EmuOverlay_444
-                               :
-#else
-                               (char *)EmuOverlay_555
-                               :
-#endif
-                               nullptr;
-    // int fldIndex;
-    // if (settings.flags.borderMode == DEFAULTBORDER)
-    // {
-
-    //     Frens::loadOverLay(nullptr, overlay);
-    //     return;
-    // }
-
-    // if (settings.flags.borderMode == THEMEDBORDER)
-    // {
-    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
-    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
-    printf("Loading bezel: %s\n", CHOSEN);
-    //}
-    // else
-    // {
-    //     fldIndex = (rand() % strlen(borderdirs));
-    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
-    //     printf("Scanning random folder: %s\n", PATH);
-    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
-    //     if (fr != FR_OK)
-    //     {
-    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
-    //         Frens::loadOverLay(nullptr, overlay);
-    //         return;
-    //     }
-    // }
-    Frens::loadOverLay(CHOSEN, overlay);
-#endif
-}
-
 static char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
@@ -996,7 +1008,7 @@ int main()
     ErrorMessage[0] = selectedRom[0] = 0;
 
     int fileSize = 0;
-    bool isGameGear = false;
+    isGameGear = false;
 
     Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
 
@@ -1068,7 +1080,7 @@ int main()
         {
             printf("Master System rom detected\n");
         }
-        loadoverlay(isGameGear);
+        loadoverlay();
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
