@@ -1033,7 +1033,7 @@ int main()
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom, "SMS");
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
             printf("Selected rom from menu: %s\n", selectedRom);
         }
