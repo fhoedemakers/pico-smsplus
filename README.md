@@ -4,7 +4,7 @@
 This software is a port of [SmsPlus](https://segaretro.org/SMS_Plus), a Sega Master System and Game Gear emulator for RP2040/RP2350 based microcontroller boards like the RaspberryPi Pico and Pico 2. Sound and video are ouput over HDMI.
 The code for HDMI output is based on [Shuichi Takano's Pico-InfoNes project](https://github.com/shuichitakano/pico-infones) which in turn is based on [PicoDVI](https://github.com/Wren6991/PicoDVI).
 
-Create a FAT32 or exFAT formatted SD card and copy your Master System (.sms) and/or Game Gear (.gg) roms and optional [metadata](#using-metadata) on to it.
+Create a FAT32 (recommended. see [#29](https://github.com/fhoedemakers/pico-smsplus/issues/29)) or exFAT formatted SD card and copy your Master System (.sms) and/or Game Gear (.gg) roms and optional [metadata](#using-metadata) on to it.
 You can organize the roms in directories. A menu is displayed on which you can select the rom to play.
 
 Supports two controllers for two player Master System games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
@@ -47,7 +47,7 @@ Click on image below to see a demo video.
 
 The binary specific for your config can be downloaded from the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page.
 
-You need a FAT32 or exFAT formatted SD card to put your .sms and .gg roms on.
+You need a FAT32 or exFAT formatted SD card to put your .sms and .gg roms on. It is highly recommended to use FAT32, see https://github.com/fhoedemakers/pico-smsplus/issues/29
 
 >[!NOTE]
 > For detailed instructions how to setup specific configurations, see the [Pico-InfonesPlus sister project](https://github.com/fhoedemakers/pico-infonesPlus).
@@ -133,23 +133,22 @@ Gamepad buttons:
 - Button2 : Open folder/flash and start game.
 - Button1 : Back to parent folder.
 - START: Show metadata and box art (when available). 
+- SELECT: Opens a setting menu. Here you can change settings like screen mode, scanlines, framerate display, menu colors and other board specific settings. Settings can also be changed in-game by pressing some button combinations as explained below. The settings menu can also be opened in-game.
 
-The colors in the menu can be changed and saved:
-  - Select + Up/Down changes the foreground color.
-  - Select + Left/Right changes the background color.
-  - Select + Button2 saves the colors. Screen will flicker when saved.
-  - Select + Button1 resets the colors to default. (Black on white)
-
+>[!NOTE]
+>On the Pimoroni Pico DV Demo Base with a Raspberry Pi Pico (RP2040), the settings menu can only be accessed during gameplay. Accessing the settings from the main menu is disabled due to occasional crashes with this specific hardware configuration.
 
 ## Emulator (in game)
 Gamepad buttons:
-- SELECT + START, Xbox button: Resets back to the SD Card menu. Game saves are saved to the SD card.
+- SELECT + START, Xbox button: opens the settings menu. From there, you can:
+  - Quit the game and return to the SD card menu
+  - Adjust settings and resume your game.
 - SELECT + UP/SELECT + DOWN: switches screen modes.
 - START + Button2 : Toggle framerate display
 - **Pimoroni Pico DV Demo Base only**: SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
 - **Fruit Jam Only** 
-  - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack.
-  - SELECT + UP: Toggle scanlines. 
+  - SELECT + UP: Toggle scanlines.
+  - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack. 
   - pushbutton 2 (on board) or SELECT + RIGHT: Toggles the VU meter on or off. (NeoPixel LEDs light up in sync with the music rhythm)
 - **Genesis Mini Controller**: When using a Genesis Mini 3 button controller, press C for SELECT. On the 8-button Genesis controllers, MODE acts as SELECT.
 - **USB-keyboard**: When using an USB-Keyboard

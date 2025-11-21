@@ -98,6 +98,7 @@ target_compile_definitions(${projectname} PUBLIC
     GPIOHSTXCK=${GPIOHSTXCK} # HSTX clock pin positive
     GPIOHSTXINVERTED=${GPIOHSTXINVERTED} # Set to 1 if HSTX pins are inverted: D- = D+ -1
     ENABLE_VU_METER=${ENABLE_VU_METER} # Enable VU meter (fruitjam NeoPixel leds)
+    WIIPAD_DELAYED_START=${WIIPAD_DELAYED_START}
     #PICO_DEBUG_MALLOC=1
 )
 if(NOT PICO_PLATFORM STREQUAL "rp2040")

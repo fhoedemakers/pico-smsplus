@@ -24,12 +24,13 @@
 #include "shared.h"
 #include "mytypes.h"
 #include "PicoPlusPsram.h"
+#include "menu_settings.h"
 
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
-
-static bool fps_enabled = false;
+bool showSettings = false;
+static bool isGameGear = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
 static char fpsString[3] = "00";
@@ -47,6 +48,40 @@ extern const unsigned char EmuOverlay_555[];
 
 #define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
+// Visibility configuration for options menu (NES specific)
+// 1 = show option line, 0 = hide.
+// Order must match enum in menu_options.h
+const uint8_t g_settings_visibility[MOPT_COUNT] = {
+    0,                               // Exit Game, or back to menu. Always visible when in-game.
+    !HSTX,                           // Screen Mode (only when not HSTX)
+    HSTX,                            // Scanlines toggle (only when HSTX)
+    1,                               // FPS Overlay
+    0,                               // Audio Enable
+    0,                               // Frame Skip
+    (EXT_AUDIO_IS_ENABLED && !HSTX), // External Audio
+    1,                               // Font Color
+    1,                               // Font Back Color
+    ENABLE_VU_METER,                 // VU Meter
+    (HW_CONFIG == 8),                // Fruit Jam Internal Speaker
+    0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
+    0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
+    0,                               // Rapid Fire on A
+    0,                               // Rapid Fire on B
+};
+const uint8_t g_available_screen_modes[] = {
+#if PICO_RP2350
+        0,   // SCANLINE_8_7, Does not work well with borders
+#else   
+        1,   // SCANLINE_8_7,
+#endif
+#if PICO_RP2350
+        0,  // NOSCANLINE_8_7, Does not work well with borders
+#else
+        1,  // NOSCANLINE_8_7,
+#endif
+        1,  // SCANLINE_1_1,
+        1   //NOSCANLINE_1_1
+};
 
 #define fpsfgcolor 0;     // black
 #define fpsbgcolor 0xFFF; // white
@@ -58,6 +93,11 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 #define FPSEND ((FPSSTART) + 8)
 
 bool reset = false;
+
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+// Cached Wii pad state updated once per frame in ProcessAfterFrameIsRendered()
+static uint16_t wiipad_raw_cached = 0;
+#endif
 
 // The Sega Master system color palette converted to RGB444
 // so it can be used with the DVI library.
@@ -473,7 +513,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
 #endif
 #endif
     // Display frame rate
-    if (fps_enabled && line >= FPSSTART && line < FPSEND)
+    if (settings.flags.displayFrameRate && line >= FPSSTART && line < FPSEND)
     {
         WORD *fpsBuffer = currentLineBuf + 40;
         int rowInChar = line % 8;
@@ -617,6 +657,57 @@ void system_save_state()
 {
     // TODO
 }
+void loadoverlay()
+{
+#if PICO_RP2350
+    if (!Frens::isFrameBufferUsed())
+    {
+        return;
+    }
+    char CRC[9];
+    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
+    static char PATH[FF_MAX_LFN + 1];
+    static char CHOSEN[FF_MAX_LFN + 1];
+    // only Game Gear has default overlay
+    char *overlay = isGameGear ?
+#if !HSTX
+                               (char *)EmuOverlay_444
+                               :
+#else
+                               (char *)EmuOverlay_555
+                               :
+#endif
+                               nullptr;
+    // int fldIndex;
+    // if (settings.flags.borderMode == DEFAULTBORDER)
+    // {
+
+    //     Frens::loadOverLay(nullptr, overlay);
+    //     return;
+    // }
+
+    // if (settings.flags.borderMode == THEMEDBORDER)
+    // {
+    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
+    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
+    printf("Loading bezel: %s\n", CHOSEN);
+    //}
+    // else
+    // {
+    //     fldIndex = (rand() % strlen(borderdirs));
+    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
+    //     printf("Scanning random folder: %s\n", PATH);
+    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
+    //     if (fr != FR_OK)
+    //     {
+    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
+    //         Frens::loadOverLay(nullptr, overlay);
+    //         return;
+    //     }
+    // }
+    Frens::loadOverLay(CHOSEN, overlay);
+#endif
+}
 
 int ProcessAfterFrameIsRendered()
 {
@@ -638,7 +729,7 @@ int ProcessAfterFrameIsRendered()
     // nespad_read_finish(); // Sets global nespad_state var
     tuh_task();
     // Frame rate calculation
-    if (fps_enabled)
+    if (settings.flags.displayFrameRate)
     {
         // calculate fps and round to nearest value (instead of truncating/floor)
         uint32_t tick_us = Frens::time_us() - start_tick_us;
@@ -647,10 +738,29 @@ int ProcessAfterFrameIsRendered()
         fpsString[0] = '0' + (fps / 10);
         fpsString[1] = '0' + (fps % 10);
     }
-#if !HSTX
-#else
-    // hstx_waitForVSync();
+#if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
+    // Poll Wii pad once per frame (function called once per rendered frame)
+    wiipad_raw_cached = wiipad_read();
 #endif
+#if ENABLE_VU_METER
+        if (isVUMeterToggleButtonPressed())
+        {
+            settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+            FrensSettings::savesettings();
+            // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+            turnOffAllLeds();
+        }
+#endif
+        if (showSettings)
+        {
+            int rval = showSettingsMenu(true);
+            if (rval == 3)
+            {
+                reset = true;
+            }
+            showSettings = false;
+            loadoverlay();
+        }
     return count;
 }
 
@@ -672,9 +782,6 @@ static DWORD prevOtherButtons[2]{};
 
 void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorepushed, char *gamepadType)
 {
-#if ENABLE_VU_METER
-    bool toggleVUMeter = false;
-#endif
     // pwdPad1 and pwdPad2 are only used in menu and are only set on first push
     *pdwPad1 = *pdwPad2 = *pdwSystem = 0;
 
@@ -727,14 +834,14 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             if (i == 1)
             {
-                nespadbuttons |= wiipad_read();
+                nespadbuttons |= wiipad_raw_cached;
             }
         }
         else // if no USB controller is connected, wiipad acts as controller 1
         {
             if (i == 0)
             {
-                nespadbuttons |= wiipad_read();
+                nespadbuttons |= wiipad_raw_cached;
             }
         }
 #endif
@@ -770,9 +877,10 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         {
             if (pushedsystem & INPUT_START)
             {
-                system_save_sram();
-                reset = true;
-                printf("Reset pressed\n");
+                // system_save_sram();
+                // reset = true;
+                // printf("Reset pressed\n");
+                showSettings = true;
             }
             else if (pushed & INPUT_LEFT)
             {
@@ -791,7 +899,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #else
                 settings.flags.useExtAudio = 0;
 #endif
-                Frens::savesettings();
+                FrensSettings::savesettings();
             }
             else if (pushed & INPUT_UP)
             {
@@ -809,20 +917,24 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 Frens::toggleScanLines();
 #endif
             }
-            else if (pushed && INPUT_RIGHT)
-            {
 #if ENABLE_VU_METER
-                toggleVUMeter = true;
-#endif
+            else if (pushed & INPUT_RIGHT)
+            {
+                settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+                FrensSettings::savesettings();
+                // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+                turnOffAllLeds();
             }
+#endif
         }
         if (p1 & INPUT_START)
         {
             // Toggle frame rate display
             if (pushed & INPUT_BUTTON1)
             {
-                fps_enabled = !fps_enabled;
-                printf("FPS: %s\n", fps_enabled ? "ON" : "OFF");
+                settings.flags.displayFrameRate = !settings.flags.displayFrameRate;
+                printf("FPS: %s\n", settings.flags.displayFrameRate ? "ON" : "OFF");
+                FrensSettings::savesettings();
             }
         }
         prevButtons[i] = smsbuttons;
@@ -847,19 +959,14 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
     }
     input.system = *pdwSystem = smssystem[0] | smssystem[1];
     // return only on first push
+    if (reset)
+    {
+        system_save_sram();
+    }
     if (pushedsystem)
     {
         *pdwSystem = smssystem[0] | smssystem[1];
     }
-#if ENABLE_VU_METER
-    if (toggleVUMeter || isVUMeterToggleButtonPressed())
-    {
-        settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-        Frens::savesettings();
-        // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
-        turnOffAllLeds();
-    }
-#endif
 }
 
 void in_ram(process)(void)
@@ -889,58 +996,6 @@ void in_ram(process)(void)
     }
 }
 
-void loadoverlay(bool isGameGear)
-{
-#if PICO_RP2350
-    if (!Frens::isFrameBufferUsed())
-    {
-        return;
-    }
-    char CRC[9];
-    static const char *borderdirs = "ABCDEFGHIJKLMNOPQRSTUVWY";
-    static char PATH[FF_MAX_LFN + 1];
-    static char CHOSEN[FF_MAX_LFN + 1];
-    // only Game Gear has default overlay
-    char *overlay = isGameGear ?
-#if !HSTX
-                               (char *)EmuOverlay_444
-                               :
-#else
-                               (char *)EmuOverlay_555
-                               :
-#endif
-                               nullptr;
-    // int fldIndex;
-    // if (settings.flags.borderMode == DEFAULTBORDER)
-    // {
-
-    //     Frens::loadOverLay(nullptr, overlay);
-    //     return;
-    // }
-
-    // if (settings.flags.borderMode == THEMEDBORDER)
-    // {
-    snprintf(CRC, sizeof(CRC), "%08X", Frens::getCrcOfLoadedRom());
-    snprintf(CHOSEN, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Bezels/%c/%s%s", CRC[0], CRC, FILEXTFORSEARCH);
-    printf("Loading bezel: %s\n", CHOSEN);
-    //}
-    // else
-    // {
-    //     fldIndex = (rand() % strlen(borderdirs));
-    //     snprintf(PATH, (FF_MAX_LFN + 1) * sizeof(char), "/metadata/SMS/Images/Borders/%c", borderdirs[fldIndex]);
-    //     printf("Scanning random folder: %s\n", PATH);
-    //     FRESULT fr = Frens::pick_random_file_fullpath(PATH, CHOSEN, (FF_MAX_LFN + 1) * sizeof(char));
-    //     if (fr != FR_OK)
-    //     {
-    //         printf("Failed to pick random file from %s: %d\n", PATH, fr);
-    //         Frens::loadOverLay(nullptr, overlay);
-    //         return;
-    //     }
-    // }
-    Frens::loadOverLay(CHOSEN, overlay);
-#endif
-}
-
 static char selectedRom[FF_MAX_LFN];
 /// @brief
 /// Start emulator. Emulator does not run well in DEBUG mode, lots of red screen flicker. In order to keep it running fast enough, we need to run it in release mode or in
@@ -953,11 +1008,10 @@ int main()
     ErrorMessage[0] = selectedRom[0] = 0;
 
     int fileSize = 0;
-    bool isGameGear = false;
+    isGameGear = false;
 
     Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
 
-    stdio_init_all();
     printf("==========================================================================================\n");
     printf("Pico-SMS+ %s\n", SWVERSION);
     printf("Build date: %s\n", __DATE__);
@@ -966,7 +1020,7 @@ int main()
     printf("Stack size: %d bytes\n", PICO_STACK_SIZE);
     printf("==========================================================================================\n");
     printf("Starting up...\n");
-
+    FrensSettings::initSettings(FrensSettings::emulators::SMS);
     // Note:
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
     //     - Top and bottom margins are reset to zero
@@ -979,13 +1033,14 @@ int main()
     {
         if (strlen(selectedRom) == 0 || reset == true)
         {
-            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom, "SMS");
+            menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
             printf("Selected rom from menu: %s\n", selectedRom);
         }
         reset = false;
         fileSize = 0;
         isGameGear = false;
+        EXT_AUDIO_MUTE_INTERNAL_SPEAKER(settings.flags.fruitJamEnableInternalSpeaker == 0);
         if (Frens::isPsramEnabled())
         {
             // Detect rom type from memory
@@ -1024,7 +1079,7 @@ int main()
         {
             printf("Master System rom detected\n");
         }
-        loadoverlay(isGameGear);
+        loadoverlay();
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
