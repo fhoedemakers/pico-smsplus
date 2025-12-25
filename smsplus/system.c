@@ -17,7 +17,8 @@
 */
 
 #include "shared.h"
-
+#include "ff.h"
+#include <stdbool.h>
 
 t_bitmap bitmap;
 t_cart cart;
@@ -140,48 +141,102 @@ void system_reset(void) {
 }
 
 
-void system_save_state(void *fd) {
+bool system_save_state(FIL *fd) {
+    UINT bw;
+    FRESULT fr;
     /* Save VDP context */
-    fwrite(&vdp, sizeof(t_vdp), 1, fd);
+    fr = f_write(fd, &vdp, sizeof(t_vdp), &bw);
+    if (fr != FR_OK || bw != sizeof(t_vdp)) {
+        printf("Error writing VDP context: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(t_vdp));
+        return false;
+    }
 
     /* Save SMS context */
-    fwrite(&sms, sizeof(t_sms), 1, fd);
+    fr = f_write(fd, &sms, sizeof(t_sms), &bw);
+    if (fr != FR_OK || bw != sizeof(t_sms)) {
+        printf("Error writing SMS context: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(t_sms));
+        return false;
+    }
 
     /* Save Z80 context */
-    fwrite(Z80_Context, sizeof(Z80_Regs), 1, fd);
-    fwrite(&after_EI, sizeof(int), 1, fd);
+    fr = f_write(fd, Z80_Context, sizeof(Z80_Regs), &bw);
+    if (fr != FR_OK || bw != sizeof(Z80_Regs)) {
+        printf("Error writing Z80 regs: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(Z80_Regs));
+        return false;
+    }
+    fr = f_write(fd, &after_EI, sizeof(int), &bw);
+    if (fr != FR_OK || bw != sizeof(int)) {
+        printf("Error writing after_EI: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(int));
+        return false;
+    }
 
     /* Save YM2413 registers */
-    fwrite(&ym2413.reg[0], 0x40, 1, fd);
+    fr = f_write(fd, &ym2413.reg[0], 0x40, &bw);
+    if (fr != FR_OK || bw != 0x40) {
+        printf("Error writing YM2413 regs: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)0x40);
+        return false;
+    }
 
     /* Save SN76489 context */
-    fwrite(&sn[0], sizeof(t_SN76496), 1, fd);
+    fr = f_write(fd, &sn[0], sizeof(t_SN76496), &bw);
+    if (fr != FR_OK || bw != sizeof(t_SN76496)) {
+        printf("Error writing SN76489 context: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(t_SN76496));
+        return false;
+    }
+
+    return true;
 }
 
 
-void system_load_state(void *fd) {
+bool system_load_state(FIL *fd) {
     int i;
     uint8 reg[0x40];
+    UINT br;
+    FRESULT fr;
 
     /* Initialize everything */
-    cpu_reset();
+    // cpu_reset();
     system_reset();
 
     /* Load VDP context */
-    fread(&vdp, sizeof(t_vdp), 1, fd);
+    fr = f_read(fd, &vdp, sizeof(t_vdp), &br);
+    if (fr != FR_OK || br != sizeof(t_vdp)) {
+        printf("Error reading VDP context: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(t_vdp));
+        return false;
+    }
 
     /* Load SMS context */
-    fread(&sms, sizeof(t_sms), 1, fd);
+    fr = f_read(fd, &sms, sizeof(t_sms), &br);
+    if (fr != FR_OK || br != sizeof(t_sms)) {
+        printf("Error reading SMS context: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(t_sms));
+        return false;
+    }
 
     /* Load Z80 context */
-    fread(Z80_Context, sizeof(Z80_Regs), 1, fd);
-    fread(&after_EI, sizeof(int), 1, fd);
+    fr = f_read(fd, Z80_Context, sizeof(Z80_Regs), &br);
+    if (fr != FR_OK || br != sizeof(Z80_Regs)) {
+        printf("Error reading Z80 regs: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(Z80_Regs));
+        return false;
+    }
+    fr = f_read(fd, &after_EI, sizeof(int), &br);
+    if (fr != FR_OK || br != sizeof(int)) {
+        printf("Error reading after_EI: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(int));
+        return false;
+    }
 
     /* Load YM2413 registers */
-    fread(reg, 0x40, 1, fd);
+    fr = f_read(fd, reg, 0x40, &br);
+    if (fr != FR_OK || br != 0x40) {
+        printf("Error reading YM2413 regs: fr=%d read=%u expected=%u\n", fr, br, (unsigned)0x40);
+        return false;
+    }
 
     /* Load SN76489 context */
-    fread(&sn[0], sizeof(t_SN76496), 1, fd);
+    fr = f_read(fd, &sn[0], sizeof(t_SN76496), &br);
+    if (fr != FR_OK || br != sizeof(t_SN76496)) {
+        printf("Error reading SN76489 context: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(t_SN76496));
+        return false;
+    }
 
     /* Restore callbacks */
     z80_set_irq_callback(sms_irq_callback);
@@ -256,6 +311,7 @@ void system_load_state(void *fd) {
             ym2413_write(0, 1, reg[i]);
         }
 #endif
+    return true;
     }
 }
 
