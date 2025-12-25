@@ -26,6 +26,7 @@
 #include "PicoPlusPsram.h"
 #include "menu_settings.h"
 #include "state.h"
+#include "soundrecorder.h"
 
 bool isFatalError = false;
 static FATFS fs;
@@ -743,7 +744,7 @@ int ProcessAfterFrameIsRendered()
     if (isVUMeterToggleButtonPressed())
     {
         settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-        FrensSettings::savesettings();
+        // FrensSettings::savesettings();
         // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
         turnOffAllLeds();
     }
@@ -913,6 +914,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 // system_save_sram();
                 // reset = true;
                 // printf("Reset pressed\n");
+                FrensSettings::savesettings();
                 showSettings = true;
             }
             else if (pushed & INPUT_LEFT)
@@ -932,7 +934,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #else
                 settings.flags.useExtAudio = 0;
 #endif
-                FrensSettings::savesettings();
+                //FrensSettings::savesettings();
             }
             else if (pushed & INPUT_UP)
             {
@@ -954,7 +956,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             else if (pushed & INPUT_RIGHT)
             {
                 settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-                FrensSettings::savesettings();
+                //FrensSettings::savesettings();
                 // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
                 turnOffAllLeds();
             }
@@ -967,7 +969,40 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             {
                 settings.flags.displayFrameRate = !settings.flags.displayFrameRate;
                 printf("FPS: %s\n", settings.flags.displayFrameRate ? "ON" : "OFF");
-                FrensSettings::savesettings();
+                // FrensSettings::savesettings();
+            }
+            else if (pushed & INPUT_BUTTON2)
+            {
+#if PICO_RP2350
+                if (Frens::isPsramEnabled() && !SoundRecorder::isRecording())
+                {
+                    SoundRecorder::startRecording();
+                }
+#endif
+            }
+            else if (pushed & INPUT_UP)
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::LOAD;
+            }
+            else if (pushed & INPUT_DOWN)
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::SAVE;
+            }
+            else if (pushed & INPUT_LEFT)
+            {
+#if HW_CONFIG == 8
+                settings.fruitjamVolumeLevel = std::max(-63, settings.fruitjamVolumeLevel - 1);
+                EXT_AUDIO_SETVOLUME(settings.fruitjamVolumeLevel);
+#endif
+            }
+            else if (pushed & INPUT_RIGHT)
+            {
+#if HW_CONFIG == 8
+                settings.fruitjamVolumeLevel = std::min(23, settings.fruitjamVolumeLevel + 1);
+                EXT_AUDIO_SETVOLUME(settings.fruitjamVolumeLevel);
+#endif
             }
         }
         prevButtons[i] = smsbuttons;
