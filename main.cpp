@@ -1036,10 +1036,20 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         *pdwSystem = smssystem[0] | smssystem[1];
     }
 }
-
+static DWORD *OLD_Pad1 = nullptr;
 void in_ram(process)(void)
 {
+
     DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
+    // print address of pwdPad1 for debugging purposes
+    printf("pwdPad1 address: %p\n", (void *)&pdwPad1);
+    if (OLD_Pad1 != nullptr)
+    {
+        // calculate offset between old and new address
+        ptrdiff_t offset = (char *)&pdwPad1 - (char *)OLD_Pad1;
+        printf("Offset between old and new pwdPad1: %ld bytes\n",offset);
+    }
+    OLD_Pad1 = &pdwPad1;
     while (reset == false)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
