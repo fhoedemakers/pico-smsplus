@@ -25,14 +25,18 @@
 #include "mytypes.h"
 #include "PicoPlusPsram.h"
 #include "menu_settings.h"
+#include "state.h"
 
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
 bool showSettings = false;
+bool loadSaveStateMenu = false;
+SaveStateTypes quickSaveAction = SaveStateTypes::NONE;
 static bool isGameGear = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
+static uint8_t framesbeforeAutoStateIsLoaded = 0;
 static char fpsString[3] = "00";
 #if PICO_RP2350
 extern const unsigned char EmuOverlay_444[];
@@ -51,8 +55,9 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Visibility configuration for options menu (NES specific)
 // 1 = show option line, 0 = hide.
 // Order must match enum in menu_options.h
-const uint8_t g_settings_visibility[MOPT_COUNT] = {
+const int8_t g_settings_visibility[MOPT_COUNT] = {
     0,                               // Exit Game, or back to menu. Always visible when in-game.
+    0,                               // Save / Restore State
     !HSTX,                           // Screen Mode (only when not HSTX)
     HSTX,                            // Scanlines toggle (only when HSTX)
     1,                               // FPS Overlay
@@ -63,6 +68,7 @@ const uint8_t g_settings_visibility[MOPT_COUNT] = {
     1,                               // Font Back Color
     ENABLE_VU_METER,                 // VU Meter
     (HW_CONFIG == 8),                // Fruit Jam Internal Speaker
+    (HW_CONFIG == 8),                // Fruit Jam Volume Control
     0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
     0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
     0,                               // Rapid Fire on A
@@ -70,17 +76,17 @@ const uint8_t g_settings_visibility[MOPT_COUNT] = {
 };
 const uint8_t g_available_screen_modes[] = {
 #if PICO_RP2350
-        0,   // SCANLINE_8_7, Does not work well with borders
-#else   
-        1,   // SCANLINE_8_7,
+    0, // SCANLINE_8_7, Does not work well with borders
+#else
+    1, // SCANLINE_8_7,
 #endif
 #if PICO_RP2350
-        0,  // NOSCANLINE_8_7, Does not work well with borders
+    0, // NOSCANLINE_8_7, Does not work well with borders
 #else
-        1,  // NOSCANLINE_8_7,
+    1, // NOSCANLINE_8_7,
 #endif
-        1,  // SCANLINE_1_1,
-        1   //NOSCANLINE_1_1
+    1, // SCANLINE_1_1,
+    1  // NOSCANLINE_1_1
 };
 
 #define fpsfgcolor 0;     // black
@@ -648,15 +654,6 @@ void system_save_sram()
     printf("done\n");
 }
 
-void system_load_state()
-{
-    // TODO
-}
-
-void system_save_state()
-{
-    // TODO
-}
 void loadoverlay()
 {
 #if PICO_RP2350
@@ -743,24 +740,60 @@ int ProcessAfterFrameIsRendered()
     wiipad_raw_cached = wiipad_read();
 #endif
 #if ENABLE_VU_METER
-        if (isVUMeterToggleButtonPressed())
-        {
-            settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-            FrensSettings::savesettings();
-            // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
-            turnOffAllLeds();
-        }
+    if (isVUMeterToggleButtonPressed())
+    {
+        settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+        FrensSettings::savesettings();
+        // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+        turnOffAllLeds();
+    }
 #endif
-        if (showSettings)
+    if (showSettings)
+    {
+        showSettings = false;
+        int rval = showSettingsMenu(true);
+        if (rval == 3)
         {
-            int rval = showSettingsMenu(true);
-            if (rval == 3)
+            reset = true;
+            if (isAutoSaveStateConfigured())
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::SAVE_AND_EXIT;
+            }
+        }
+        if (rval == 4)
+        {
+            loadSaveStateMenu = true;
+            quickSaveAction = SaveStateTypes::NONE;
+        }
+        loadoverlay();
+    }
+    if (loadSaveStateMenu)
+    {
+        if (quickSaveAction == SaveStateTypes::LOAD_AND_START)
+        {
+            if (framesbeforeAutoStateIsLoaded > 0)
+            {
+                --framesbeforeAutoStateIsLoaded; // let the emulator run for a few frames before loading state
+            }
+        }
+        else
+        {
+            framesbeforeAutoStateIsLoaded = 0;
+        }
+        if (framesbeforeAutoStateIsLoaded == 0)
+        {
+
+            char msg[24];
+            snprintf(msg, sizeof(msg), "CRC %08X", Frens::getCrcOfLoadedRom());
+            if (showSaveStateMenu(Emulator_SaveState, Emulator_LoadState, msg, quickSaveAction) == false)
             {
                 reset = true;
-            }
-            showSettings = false;
-            loadoverlay();
+            };
+            loadSaveStateMenu = false;
         }
+        loadoverlay();
+    }
     return count;
 }
 
@@ -1078,6 +1111,28 @@ int main()
         else
         {
             printf("Master System rom detected\n");
+        }
+        if (isAutoSaveStateConfigured())
+        {
+            char tmpPath[40];
+            getAutoSaveStatePath(tmpPath, sizeof(tmpPath));
+            printf("Auto-save is configured found for this ROM (%s)\n", tmpPath);
+            if (Frens::fileExists(tmpPath))
+            {
+                printf("Auto-save state found for this ROM (%s)\n", tmpPath);
+                printf("Loading auto-save state...\n");
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::LOAD_AND_START;
+                framesbeforeAutoStateIsLoaded = 120; // wait 2 seconds before loading auto state
+            }
+            else
+            {
+                printf("No auto-save state found for this ROM.\n");
+            }
+        }
+        else
+        {
+            printf("No auto-save configured for this ROM.\n");
         }
         loadoverlay();
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
