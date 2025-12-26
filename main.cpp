@@ -792,8 +792,9 @@ int ProcessAfterFrameIsRendered()
                 reset = true;
             };
             loadSaveStateMenu = false;
+             loadoverlay();
         }
-        loadoverlay();
+       
     }
     return count;
 }
@@ -1042,7 +1043,7 @@ void in_ram(process)(void)
 
     DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
     // print address of pwdPad1 for debugging purposes
-    printf("pwdPad1 address: %p\n", (void *)&pdwPad1);
+    //printf("pwdPad1 address: %p\n", (void *)&pdwPad1);
     // if (OLD_Pad1 != nullptr)
     // {
     //     // calculate offset between old and new address
