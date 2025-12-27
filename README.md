@@ -152,7 +152,7 @@ Gamepad buttons:
   - SELECT + UP: Toggle scanlines.
   - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack. 
   - pushbutton 2 (on board) or SELECT + RIGHT: Toggles the VU meter on or off. (NeoPixel LEDs light up in sync with the music rhythm)
-- START + LEFT/RIGHT: Adjust volume of built-in speaker and external audio jack.
+  - START + LEFT/RIGHT: Adjust volume of built-in speaker and external audio jack.
 - **RP2350 with PSRAM only**: Record about 30 seconds of audio by pressing START to pause the game and then START + BUTTON1. Audio is recorded to **/soundrecorder.wav** on the SD-card.
 - **Genesis Mini Controller**: When using a Genesis Mini 3 button controller, press C for SELECT. On the 8-button Genesis controllers, MODE acts as SELECT.
 - **USB-keyboard**: When using an USB-Keyboard
