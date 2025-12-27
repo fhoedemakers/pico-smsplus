@@ -25,14 +25,19 @@
 #include "mytypes.h"
 #include "PicoPlusPsram.h"
 #include "menu_settings.h"
+#include "state.h"
+#include "soundrecorder.h"
 
 bool isFatalError = false;
 static FATFS fs;
 char *romName;
 bool showSettings = false;
+bool loadSaveStateMenu = false;
+SaveStateTypes quickSaveAction = SaveStateTypes::NONE;
 static bool isGameGear = false;
 static uint32_t start_tick_us = 0;
 static uint32_t fps = 0;
+static uint8_t framesbeforeAutoStateIsLoaded = 0;
 static char fpsString[3] = "00";
 #if PICO_RP2350
 extern const unsigned char EmuOverlay_444[];
@@ -51,8 +56,9 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Visibility configuration for options menu (NES specific)
 // 1 = show option line, 0 = hide.
 // Order must match enum in menu_options.h
-const uint8_t g_settings_visibility[MOPT_COUNT] = {
+const int8_t g_settings_visibility[MOPT_COUNT] = {
     0,                               // Exit Game, or back to menu. Always visible when in-game.
+    0,                               // Save / Restore State
     !HSTX,                           // Screen Mode (only when not HSTX)
     HSTX,                            // Scanlines toggle (only when HSTX)
     1,                               // FPS Overlay
@@ -63,6 +69,7 @@ const uint8_t g_settings_visibility[MOPT_COUNT] = {
     1,                               // Font Back Color
     ENABLE_VU_METER,                 // VU Meter
     (HW_CONFIG == 8),                // Fruit Jam Internal Speaker
+    (HW_CONFIG == 8),                // Fruit Jam Volume Control
     0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
     0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
     0,                               // Rapid Fire on A
@@ -70,17 +77,17 @@ const uint8_t g_settings_visibility[MOPT_COUNT] = {
 };
 const uint8_t g_available_screen_modes[] = {
 #if PICO_RP2350
-        0,   // SCANLINE_8_7, Does not work well with borders
-#else   
-        1,   // SCANLINE_8_7,
+    0, // SCANLINE_8_7, Does not work well with borders
+#else
+    1, // SCANLINE_8_7,
 #endif
 #if PICO_RP2350
-        0,  // NOSCANLINE_8_7, Does not work well with borders
+    0, // NOSCANLINE_8_7, Does not work well with borders
 #else
-        1,  // NOSCANLINE_8_7,
+    1, // NOSCANLINE_8_7,
 #endif
-        1,  // SCANLINE_1_1,
-        1   //NOSCANLINE_1_1
+    1, // SCANLINE_1_1,
+    1  // NOSCANLINE_1_1
 };
 
 #define fpsfgcolor 0;     // black
@@ -648,15 +655,6 @@ void system_save_sram()
     printf("done\n");
 }
 
-void system_load_state()
-{
-    // TODO
-}
-
-void system_save_state()
-{
-    // TODO
-}
 void loadoverlay()
 {
 #if PICO_RP2350
@@ -709,7 +707,7 @@ void loadoverlay()
 #endif
 }
 
-int ProcessAfterFrameIsRendered()
+static inline int ProcessAfterFrameIsRendered()
 {
     Frens::PaceFrames60fps(false);
 #if NES_PIN_CLK != -1
@@ -743,24 +741,61 @@ int ProcessAfterFrameIsRendered()
     wiipad_raw_cached = wiipad_read();
 #endif
 #if ENABLE_VU_METER
-        if (isVUMeterToggleButtonPressed())
-        {
-            settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-            FrensSettings::savesettings();
-            // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
-            turnOffAllLeds();
-        }
+    if (isVUMeterToggleButtonPressed())
+    {
+        settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
+        // FrensSettings::savesettings();
+        // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
+        turnOffAllLeds();
+    }
 #endif
-        if (showSettings)
+    if (showSettings)
+    {
+        showSettings = false;
+        int rval = showSettingsMenu(true);
+        if (rval == 3)
         {
-            int rval = showSettingsMenu(true);
-            if (rval == 3)
+            reset = true;
+            if (isAutoSaveStateConfigured())
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::SAVE_AND_EXIT;
+            }
+        }
+        if (rval == 4)
+        {
+            loadSaveStateMenu = true;
+            quickSaveAction = SaveStateTypes::NONE;
+        }
+        loadoverlay();
+    }
+    if (loadSaveStateMenu)
+    {
+        if (quickSaveAction == SaveStateTypes::LOAD_AND_START)
+        {
+            if (framesbeforeAutoStateIsLoaded > 0)
+            {
+                --framesbeforeAutoStateIsLoaded; // let the emulator run for a few frames before loading state
+            }
+        }
+        else
+        {
+            framesbeforeAutoStateIsLoaded = 0;
+        }
+        if (framesbeforeAutoStateIsLoaded == 0)
+        {
+
+            char msg[24];
+            snprintf(msg, sizeof(msg), "CRC %08X", Frens::getCrcOfLoadedRom());
+            if (showSaveStateMenu(Emulator_SaveState, Emulator_LoadState, msg, quickSaveAction) == false)
             {
                 reset = true;
-            }
-            showSettings = false;
-            loadoverlay();
+            };
+            loadSaveStateMenu = false;
+             loadoverlay();
         }
+       
+    }
     return count;
 }
 
@@ -880,6 +915,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
                 // system_save_sram();
                 // reset = true;
                 // printf("Reset pressed\n");
+                FrensSettings::savesettings();
                 showSettings = true;
             }
             else if (pushed & INPUT_LEFT)
@@ -899,7 +935,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
 #else
                 settings.flags.useExtAudio = 0;
 #endif
-                FrensSettings::savesettings();
+                //FrensSettings::savesettings();
             }
             else if (pushed & INPUT_UP)
             {
@@ -921,7 +957,7 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             else if (pushed & INPUT_RIGHT)
             {
                 settings.flags.enableVUMeter = !settings.flags.enableVUMeter;
-                FrensSettings::savesettings();
+                //FrensSettings::savesettings();
                 // printf("VU Meter %s\n", settings.flags.enableVUMeter ? "enabled" : "disabled");
                 turnOffAllLeds();
             }
@@ -934,7 +970,40 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
             {
                 settings.flags.displayFrameRate = !settings.flags.displayFrameRate;
                 printf("FPS: %s\n", settings.flags.displayFrameRate ? "ON" : "OFF");
-                FrensSettings::savesettings();
+                // FrensSettings::savesettings();
+            }
+            else if (pushed & INPUT_BUTTON2)
+            {
+#if PICO_RP2350
+                if (Frens::isPsramEnabled() && !SoundRecorder::isRecording())
+                {
+                    SoundRecorder::startRecording();
+                }
+#endif
+            }
+            else if (pushed & INPUT_UP)
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::LOAD;
+            }
+            else if (pushed & INPUT_DOWN)
+            {
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::SAVE;
+            }
+            else if (pushed & INPUT_LEFT)
+            {
+#if HW_CONFIG == 8
+                settings.fruitjamVolumeLevel = std::max(-63, settings.fruitjamVolumeLevel - 1);
+                EXT_AUDIO_SETVOLUME(settings.fruitjamVolumeLevel);
+#endif
+            }
+            else if (pushed & INPUT_RIGHT)
+            {
+#if HW_CONFIG == 8
+                settings.fruitjamVolumeLevel = std::min(23, settings.fruitjamVolumeLevel + 1);
+                EXT_AUDIO_SETVOLUME(settings.fruitjamVolumeLevel);
+#endif
             }
         }
         prevButtons[i] = smsbuttons;
@@ -968,10 +1037,20 @@ void processinput(DWORD *pdwPad1, DWORD *pdwPad2, DWORD *pdwSystem, bool ignorep
         *pdwSystem = smssystem[0] | smssystem[1];
     }
 }
-
+//static DWORD *OLD_Pad1 = nullptr;
 void in_ram(process)(void)
 {
+
     DWORD pdwPad1, pdwPad2, pdwSystem; // have only meaning in menu
+    // print address of pwdPad1 for debugging purposes
+    //printf("pwdPad1 address: %p\n", (void *)&pdwPad1);
+    // if (OLD_Pad1 != nullptr)
+    // {
+    //     // calculate offset between old and new address
+    //     ptrdiff_t offset = (char *)&pdwPad1 - (char *)OLD_Pad1;
+    //     printf("Offset between old and new pwdPad1: %ld bytes\n",offset);
+    // }
+    // OLD_Pad1 = &pdwPad1;
     while (reset == false)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
@@ -1031,12 +1110,14 @@ int main()
     bool showSplash = true;
     while (true)
     {
+        #if 1
         if (strlen(selectedRom) == 0 || reset == true)
         {
             menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
             printf("Selected rom from menu: %s\n", selectedRom);
         }
+        #endif
         reset = false;
         fileSize = 0;
         isGameGear = false;
@@ -1079,6 +1160,28 @@ int main()
         {
             printf("Master System rom detected\n");
         }
+        if (isAutoSaveStateConfigured())
+        {
+            char tmpPath[40];
+            getAutoSaveStatePath(tmpPath, sizeof(tmpPath));
+            printf("Auto-save is configured found for this ROM (%s)\n", tmpPath);
+            if (Frens::fileExists(tmpPath))
+            {
+                printf("Auto-save state found for this ROM (%s)\n", tmpPath);
+                printf("Loading auto-save state...\n");
+                loadSaveStateMenu = true;
+                quickSaveAction = SaveStateTypes::LOAD_AND_START;
+                framesbeforeAutoStateIsLoaded = 120; // wait 2 seconds before loading auto state
+            }
+            else
+            {
+                printf("No auto-save state found for this ROM.\n");
+            }
+        }
+        else
+        {
+            printf("No auto-save configured for this ROM.\n");
+        }
         loadoverlay();
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
         // Initialize all systems and power on
@@ -1089,12 +1192,25 @@ int main()
         system_reset();
         printf("Starting game\n");
         process();
+#if PICO_RP2350
         system_shutdown();
         selectedRom[0] = 0;
         showSplash = false;
 #if ENABLE_VU_METER
         turnOffAllLeds();
 #endif
+#else
+        // RP2040: to avoid possible out of memory errors after reset, reboot the system
+        printf("Rebooting...\n");
+        f_unlink(ROMINFOFILE); // remove rom info file to prevent loading same rom again at startup
+        watchdog_enable(1, 1);
+        while (1)
+        {
+            tight_loop_contents();
+            // printf("Waiting for reboot...\n");
+        };
+#endif
+
     }
 
     return 0;

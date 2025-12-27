@@ -2,6 +2,9 @@
 #ifndef _SYSTEM_H_
 #define _SYSTEM_H_
 
+#include "ff.h"
+#include <stdbool.h>
+
 //void ym2413_write(int chip, int offset, int data);
 //extern OPLL *opll;
 
@@ -92,9 +95,9 @@ void system_reset(void);
 
 void system_load_sram(void);
 
-void system_save_state(void *fd);
+bool system_save_state(FIL *fd);
 
-void system_load_state(void *fd);
+bool system_load_state(FIL *fd);
 
 void audio_init(int rate);
 
