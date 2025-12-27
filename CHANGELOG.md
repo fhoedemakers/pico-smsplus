@@ -20,7 +20,7 @@
   - M1: RP2040/RP2350 **Note**: Untested
   - M2: RP2350 only   **Note**: Untested
 - **Fruit Jam only**: Add volume controls to settings menu. Can also be changed in-game via (START + LEFT/RIGHT). Note that too high volume levels may cause distortion. (Ext speaker, advised 16 db max, internal advised 18 dB max). Latest metadata package includes a sample.wav file to test the volume level.
-- Updated PicoNesMetaData.zip: Added **sample.wav**. This sample will be played when using the Fruit Jam volume control in the settings menu. Note when **/soundrecorder.wav** is found, this file will be played in stead.
+- Updated SMSPlusMetaData.zip: Added **sample.wav**. This sample will be played when using the Fruit Jam volume control in the settings menu. Note when **/soundrecorder.wav** is found, this file will be played in stead.
 - **RP2350 only**: Updated the menu to also list .wav audio files.
 - **RP2350 Only**: Added basic wav audio playback from within the menu. Press BUTTON2 or START to play the wav file. Tested with https://lonepeakmusic.itch.io/retro-midi-music-pack-1 The wav file must have the following specs:
   - 16/24 bit PCM wav files only.  (24 bit files are downsampled to 16 bit) 
@@ -144,6 +144,7 @@ For more info about the Murmulator see this website: https://murmulator.ru/ and 
 
 Extract the zip file to the root folder of the SD card. Select a game in the menu and press START to show more information and box art. Works for most official released games. Screensaver shows floating random cover art. Works for RP2040 and RP2350.
 Extra on RP2350: when a game is loaded a themed bezel/border is shown.
+
 
 
 
