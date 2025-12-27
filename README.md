@@ -145,11 +145,15 @@ Gamepad buttons:
   - Adjust settings and resume your game.
 - SELECT + UP/SELECT + DOWN: switches screen modes.
 - START + Button2 : Toggle framerate display
+- START + DOWN : (quick) Save state. (slot 5)
+- START + UP : (quick) Load state. (slot 5)
 - **Pimoroni Pico DV Demo Base only**: SELECT + LEFT: Switch audio output to the connected speakers on the line-out jack of the Pimoroni Pico DV Demo Base. The speaker setting will be remembered when the emulator is restarted.
 - **Fruit Jam Only** 
   - SELECT + UP: Toggle scanlines.
   - pushbutton 1 (on board): Mute audio of built-in speaker. Audio is still outputted to the audio jack. 
   - pushbutton 2 (on board) or SELECT + RIGHT: Toggles the VU meter on or off. (NeoPixel LEDs light up in sync with the music rhythm)
+- START + LEFT/RIGHT: Adjust volume of built-in speaker and external audio jack.
+- **RP2350 with PSRAM only**: Record about 30 seconds of audio by pressing START to pause the game and then START + BUTTON1. Audio is recorded to **/soundrecorder.wav** on the SD-card.
 - **Genesis Mini Controller**: When using a Genesis Mini 3 button controller, press C for SELECT. On the 8-button Genesis controllers, MODE acts as SELECT.
 - **USB-keyboard**: When using an USB-Keyboard
   - Cursor keys: up, down, left, right
@@ -157,6 +161,33 @@ Gamepad buttons:
   - S: Start
   - Z: Button2
   - X: Button1
+
+# Music Playback in menu (RP2350 Only)
+
+The menu allows you to play music files. Files must meet the following requirements:
+
+- **Format:** WAV  
+- **Bit depth:** 16-bit  
+- **Sample rate:** 44.1 kHz  
+- **Channels:** Stereo  
+- **File extension:** `.wav`  
+
+## How to Play
+1. Select a music file from the menu.
+2. Press **Button2** or **START** to start playback.
+3. Press **Button2** or **START** again to stop playback.
+
+## Converting MP3 to WAV
+You can easily convert MP3 files to WAV using [Audacity](https://www.audacityteam.org/):
+
+1. Open the MP3 file in Audacity.
+2. Go to **File → Export → Export Audio**.
+3. Choose the following settings:
+   - **Format:** WAV (Microsoft)
+   - **Channels:** Stereo
+   - **Sample rate:** 44,100 Hz
+   - **Encoding:** Signed 16-bit PCM
+4. Copy the exported WAV file to the SD card.
 
 ## Using metadata.
 
