@@ -707,7 +707,7 @@ void loadoverlay()
 #endif
 }
 
-int ProcessAfterFrameIsRendered()
+static inline int ProcessAfterFrameIsRendered()
 {
     Frens::PaceFrames60fps(false);
 #if NES_PIN_CLK != -1
@@ -1110,12 +1110,14 @@ int main()
     bool showSplash = true;
     while (true)
     {
+        #if 1
         if (strlen(selectedRom) == 0 || reset == true)
         {
             menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
             printf("Selected rom from menu: %s\n", selectedRom);
         }
+        #endif
         reset = false;
         fileSize = 0;
         isGameGear = false;
@@ -1190,12 +1192,25 @@ int main()
         system_reset();
         printf("Starting game\n");
         process();
+#if PICO_RP2350
         system_shutdown();
         selectedRom[0] = 0;
         showSplash = false;
 #if ENABLE_VU_METER
         turnOffAllLeds();
 #endif
+#else
+        // RP2040: to avoid possible out of memory errors after reset, reboot the system
+        printf("Rebooting...\n");
+        f_unlink(ROMINFOFILE); // remove rom info file to prevent loading same rom again at startup
+        watchdog_enable(1, 1);
+        while (1)
+        {
+            tight_loop_contents();
+            // printf("Waiting for reboot...\n");
+        };
+#endif
+
     }
 
     return 0;
