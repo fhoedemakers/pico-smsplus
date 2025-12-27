@@ -5,15 +5,17 @@
 
 int Emulator_SaveState(const char* path)
 {
-    FIL fil;
-    FRESULT fr = f_open(&fil, path, FA_WRITE | FA_CREATE_ALWAYS);
+    // Allocate FIL on heap to avoid stack overflow
+    FIL *fil = (FIL *)Frens::f_malloc(sizeof(FIL));
+    FRESULT fr = f_open(fil, path, FA_WRITE | FA_CREATE_ALWAYS);
     if (fr != FR_OK) {
         printf("Cannot open save state file: %d (%s)\n", fr, path);
         return -1;
     }
 
-    bool ok = system_save_state(&fil);
-    FRESULT frc = f_close(&fil);
+    bool ok = system_save_state(fil);
+    FRESULT frc = f_close(fil);
+    Frens::f_free(fil);
 
     if (!ok) {
         printf("system_save_state failed (%s)\n", path);
@@ -27,8 +29,9 @@ int Emulator_SaveState(const char* path)
 }
 int Emulator_LoadState(const char* path)
 {
-    FIL fil;
-    FRESULT fr = f_open(&fil, path, FA_READ);
+    // Allocate FIL on heap to avoid stack overflow
+    FIL *fil = (FIL *)Frens::f_malloc(sizeof(FIL));
+    FRESULT fr = f_open(fil, path, FA_READ);
     if (fr != FR_OK) {
         printf("Cannot open load state file: %d (%s)\n", fr, path);
         return -1;
@@ -36,9 +39,9 @@ int Emulator_LoadState(const char* path)
     system_shutdown(); // shutdown before loading state
     system_init(SMS_AUD_RATE); // re-init system
     //system_reset(); // reset system
-    bool ok = system_load_state(&fil);
-    FRESULT frc = f_close(&fil);
-
+    bool ok = system_load_state(fil);
+    FRESULT frc = f_close(fil);
+    Frens::f_free(fil);
     if (!ok) {
         printf("system_load_state failed (%s)\n", path);
         return -1;
