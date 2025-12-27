@@ -110,21 +110,21 @@ void audio_init(int rate) {
     snd.enabled = 1;
 }
 
-
-void system_shutdown(void) {
-     // free memory
-     printf("Free memory\n");
-    frens_f_free(cachePtr);
-    frens_f_free(cacheStore);
-    frens_f_free(cacheStoreUsed);
-    frens_f_free(snd.buffer[0]);
+void system_shutdown(void)
+{
+    // free memory
+    printf("Freeing memory allocated to emulator.\n");
     frens_f_free(snd.buffer[1]);
-    if (snd.enabled) {
-//        OPLL_delete(opll);
-//        OPLL_close();
+    frens_f_free(snd.buffer[0]);
+    frens_f_free(cacheStoreUsed);
+    frens_f_free(cacheStore);
+    frens_f_free(cachePtr);
+    if (snd.enabled)
+    {
+        //        OPLL_delete(opll);
+        //        OPLL_close();
     }
 }
-
 
 void system_reset(void) {
    
@@ -171,6 +171,7 @@ bool system_save_state(FIL *fd) {
     }
 
     /* Save YM2413 registers */
+    // Note: not used
     fr = f_write(fd, &ym2413.reg[0], 0x40, &bw);
     if (fr != FR_OK || bw != 0x40) {
         printf("Error writing YM2413 regs: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)0x40);
@@ -190,7 +191,9 @@ bool system_save_state(FIL *fd) {
 
 bool system_load_state(FIL *fd) {
     int i;
-    uint8 reg[0x40];
+
+    uint8 *reg = (uint8 *)frens_f_malloc(0x40);
+
     UINT br;
     FRESULT fr;
 
@@ -224,13 +227,14 @@ bool system_load_state(FIL *fd) {
         return false;
     }
 
+    // not used
     /* Load YM2413 registers */
     fr = f_read(fd, reg, 0x40, &br);
     if (fr != FR_OK || br != 0x40) {
         printf("Error reading YM2413 regs: fr=%d read=%u expected=%u\n", fr, br, (unsigned)0x40);
         return false;
     }
-
+    
     /* Load SN76489 context */
     fr = f_read(fd, &sn[0], sizeof(t_SN76496), &br);
     if (fr != FR_OK || br != sizeof(t_SN76496)) {
@@ -311,6 +315,7 @@ bool system_load_state(FIL *fd) {
             ym2413_write(0, 1, reg[i]);
         }
 #endif
+    frens_f_free(reg);
     return true;
     }
 }
