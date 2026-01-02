@@ -99,6 +99,6 @@ bool system_save_state(FIL *fd);
 
 bool system_load_state(FIL *fd);
 
-void audio_init(int rate);
+void system_audio_init(int rate);
 
 #endif /* _SYSTEM_H_ */
