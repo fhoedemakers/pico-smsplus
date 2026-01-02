@@ -1194,25 +1194,12 @@ int main()
         system_reset();
         printf("Starting game\n");
         process();
-#if PICO_RP2350
         system_shutdown();
         selectedRom[0] = 0;
         showSplash = false;
 #if ENABLE_VU_METER
         turnOffAllLeds();
 #endif
-#else
-        // RP2040: to avoid possible out of memory errors after reset, reboot the system
-        printf("Rebooting...\n");
-        f_unlink(ROMINFOFILE); // remove rom info file to prevent loading same rom again at startup
-        watchdog_enable(1, 1);
-        while (1)
-        {
-            tight_loop_contents();
-            // printf("Waiting for reboot...\n");
-        };
-#endif
-
     }
 
     return 0;
