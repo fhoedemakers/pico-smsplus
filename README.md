@@ -135,9 +135,6 @@ Gamepad buttons:
 - START: Show metadata and box art (when available). 
 - SELECT: Opens a setting menu. Here you can change settings like screen mode, scanlines, framerate display, menu colors and other board specific settings. Settings can also be changed in-game by pressing some button combinations as explained below. The settings menu can also be opened in-game.
 
->[!NOTE]
->On the Pimoroni Pico DV Demo Base with a Raspberry Pi Pico (RP2040), the settings menu can only be accessed during gameplay. Accessing the settings from the main menu is disabled due to occasional crashes with this specific hardware configuration.
-
 ## Emulator (in game)
 Gamepad buttons:
 - SELECT + START, Xbox button: opens the settings menu. From there, you can:
