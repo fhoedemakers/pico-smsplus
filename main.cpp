@@ -64,7 +64,7 @@ const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     1,                               // FPS Overlay
     0,                               // Audio Enable
     0,                               // Frame Skip
-    (EXT_AUDIO_IS_ENABLED && !HSTX), // External Audio
+    (EXT_AUDIO_IS_ENABLED), // External Audio
     1,                               // Font Color
     1,                               // Font Back Color
     ENABLE_VU_METER,                 // VU Meter
@@ -289,7 +289,22 @@ static void inline processaudioPerFrameDVI()
         written += n;
     }
 }
-#endif // !HSTX
+#else // !HSTX
+static void inline processaudioPerFrameHSTX() {
+     for (int i = 0; i < snd.bufsize; i++)
+    {
+        short l = snd.buffer[0][i];
+        short r = snd.buffer[1][i];
+        hstx_push_audio_sample(l >> 2, r >> 2);
+#if ENABLE_VU_METER
+        if (settings.flags.enableVUMeter)
+        {
+            addSampleToVUMeter(l);
+        }
+#endif
+    }
+}
+#endif
 static void inline processaudioPerFrameI2S()
 {
     for (int i = 0; i < snd.bufsize; i++)
@@ -1069,7 +1084,12 @@ void in_ram(process)(void)
         processaudioPerFrameDVI();
 #endif
 #else
-        processaudioPerFrameI2S();
+        if (settings.flags.useExtAudio == 1)
+        {
+            processaudioPerFrameI2S();
+        } else {
+            processaudioPerFrameHSTX();
+        }
 #endif // !HSTX
         ProcessAfterFrameIsRendered();
     }
