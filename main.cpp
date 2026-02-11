@@ -74,6 +74,7 @@ const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
     0,                               // Rapid Fire on A
     0,                               // Rapid Fire on B
+     1                                // Enter bootsel mode (moved from button combo to settings menu, but keep option visible for NES)
 };
 const uint8_t g_available_screen_modes_sms[] = {
 #if PICO_RP2350
