@@ -7,13 +7,24 @@
 
 [See setup section in in Pico-infoNesPlus readme how to install and wire up](https://github.com/fhoedemakers/pico-infonesPlus#pico-setup)
 
-# v0.24 Release Notes
+# v0.25 Release notes
 
-## Fixes
+For the boards that use HSTX in stead of PicoDVI: HDMI audio is now supported via the new HSTX video driver. Huge thanks to [@fliperama86](https://github.com/fliperama86) for the awesome [pico_hdmi](https://github.com/fliperama86/pico_hdmi) driver that made this possible and for helping out.
 
-- Emulator buffers are now allocated dynmically. 
-- Pimoroni Pico DV Demo base: Settings are accessible from within the menu again.
-- ENding a game will now go back to the menu instead of rebooting the board.
+- Adafruit Fruit Jam.
+- Murmulator M2. 
+
+Other RP2350 configurations that now use HSTX (GPIO 12 - 19) in stead of PicoDVI:
+
+- [Breadboard](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard)
+- [PCB](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#pcb-with-raspberry-pi-pico-or-pico-2)
+- [Adafruit Metro RP2350](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#adafruit-metro-rp2350)
+  
+All the other boards still use PicoDVI.
+
+To enable audio over hdmi, make sure external audio is disabled in the settings menu.
+
+- Added option in settings menu to enter bootsel mode for flashing firmware. 
 
 # previous changes
 
