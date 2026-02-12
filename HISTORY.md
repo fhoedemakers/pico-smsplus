@@ -1,5 +1,13 @@
 # History of changes
 
+# v0.24 Release Notes
+
+## Fixes
+
+- Emulator buffers are now allocated dynmically. 
+- Pimoroni Pico DV Demo base: Settings are accessible from within the menu again.
+- Ending a game will now go back to the menu instead of rebooting the board.
+
 # v0.23 Release Notes
 
 - Implemented savestates [#140](https://github.com/fhoedemakers/pico-infonesPlus/issues/140)
