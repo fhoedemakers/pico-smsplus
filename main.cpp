@@ -1121,6 +1121,8 @@ int main()
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
 #if !HSTX
     scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
+#else
+    hstx_setScanLines(settings.flags.scanlineOn);
 #endif
     bool showSplash = true;
     g_settings_visibility = g_settings_visibility_sms;
