@@ -725,8 +725,8 @@ void loadoverlay()
 
 static inline int ProcessAfterFrameIsRendered()
 {
-    //Frens::PaceFrames60fps(false);
-    Frens::waitForVSync();
+    Frens::PaceFrames60fps(false);
+    //Frens::waitForVSync();
 #if NES_PIN_CLK != -1
     nespad_read_start();
 #endif
@@ -1203,6 +1203,7 @@ int main()
         }
         loadoverlay();
         load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
+        Frens::PaceFrames60fps(true); 
         // Initialize all systems and power on
         system_init(SMS_AUD_RATE);
         // load state if any
