@@ -26,6 +26,10 @@ To enable audio over hdmi, make sure external audio is disabled in the settings 
 
 - Added option in settings menu to enter bootsel mode for flashing firmware. 
 
+## Fixes
+
+- Fix for losing signal on monitors: Removed _not_in_flash_func predicates from emulator code on RP2350. (???)
+
 # previous changes
 
 See [HISTORY.md](https://github.com/fhoedemakers/pico-smsplus/blob/main/HISTORY.md)
