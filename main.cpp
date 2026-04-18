@@ -495,7 +495,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
         if (buffer)
         {
-            for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
+            for (int i = screenCropX ; i < BMP_WIDTH - screenCropX; i++)
             {
                 sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
             }
@@ -524,7 +524,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
     if (buffer)
     {
-        for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
+        for (int i = screenCropX ; i < BMP_WIDTH - screenCropX; i++)
         {
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
