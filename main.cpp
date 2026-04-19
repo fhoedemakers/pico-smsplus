@@ -1212,13 +1212,11 @@ int main()
         do {
             reset = resetGame = false;
             loadoverlay();
-            load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
-            Frens::PaceFrames60fps(true); 
+            load_rom(ROM_FILE_ADDR, fileSize, isGameGear); 
             // Initialize all systems and power on
             system_init(SMS_AUD_RATE);
             // load state if any
             // system_load_state();
-
             system_reset();
             printf("Starting game\n");
             Frens::PaceFrames60fps(true); 
