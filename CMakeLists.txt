@@ -14,14 +14,14 @@ message("* Current build type is : ${CMAKE_BUILD_TYPE}")
 
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 8 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if (NOT USE_HSTX)
     set(USE_HSTX 1 CACHE STRING "Use HSTX for display output when possible")
 endif()
 include("pico_shared/BoardConfigs.cmake")
 if (NOT PICO_BOARD )
-    set(PICO_BOARD pico CACHE STRING "Board type")
+    set(PICO_BOARD pico2 CACHE STRING "Board type")
     message("PICO_BOARD not set, using default: ${PICO_BOARD}")
 endif()
 add_definitions( -DNDEBUG )
@@ -100,6 +100,7 @@ target_compile_definitions(${projectname} PUBLIC
     GPIOHSTXINVERTED=${GPIOHSTXINVERTED} # Set to 1 if HSTX pins are inverted: D- = D+ -1
     ENABLE_VU_METER=${ENABLE_VU_METER} # Enable VU meter (fruitjam NeoPixel leds)
     WIIPAD_DELAYED_START=${WIIPAD_DELAYED_START}
+    #ENABLEDVI=1
     #PICO_DEBUG_MALLOC=1
 )
 if(NOT PICO_PLATFORM STREQUAL "rp2040")
