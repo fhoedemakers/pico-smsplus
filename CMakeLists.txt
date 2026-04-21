@@ -100,6 +100,7 @@ target_compile_definitions(${projectname} PUBLIC
     GPIOHSTXINVERTED=${GPIOHSTXINVERTED} # Set to 1 if HSTX pins are inverted: D- = D+ -1
     ENABLE_VU_METER=${ENABLE_VU_METER} # Enable VU meter (fruitjam NeoPixel leds)
     WIIPAD_DELAYED_START=${WIIPAD_DELAYED_START}
+    #HSTX_DEBUG=1
     #ENABLEDVI=1
     #PICO_DEBUG_MALLOC=1
 )
