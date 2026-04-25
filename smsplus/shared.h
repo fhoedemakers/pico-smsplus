@@ -29,7 +29,9 @@ extern "C" {
 #define strcasecmp stricmp
 #endif
 #endif
-
+#if PICO_RP2350
+#define in_ram
+#endif
 #ifndef in_ram
 #ifdef PICO_BOARD
 #include <pico.h>

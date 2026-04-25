@@ -95,7 +95,6 @@ typedef struct
 
 //     return 1;
 // }
-void *frens_f_malloc(size_t size);
 int load_rom(uintptr_t addr,   int size, bool isGameGear)
 {
     uint8_t *start = (uint8_t *)addr;
@@ -106,8 +105,6 @@ int load_rom(uintptr_t addr,   int size, bool isGameGear)
     }
     sms.use_fm = 0;
     sms.country = TYPE_OVERSEAS;
-    sms.ram = (uint8 *)frens_f_malloc(RAMSIZEBYTES);    
-    sms.sram = (uint8 *)frens_f_malloc(SRAMSIZEBYTES);
     sms.dummy = smsBufferLine;
     bitmap.data = smsBufferLine;
     bitmap.width = BMP_WIDTH;

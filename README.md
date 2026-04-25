@@ -9,6 +9,10 @@ You can organize the roms in directories. A menu is displayed on which you can s
 
 Supports two controllers for two player Master System games. [See "about two player games" below for specifics and limitations](#about-two-player-games) 
 
+Save and load state possible.
+
+Battery backed saves stored on SD for games that support this. 
+
 See the [releases](https://github.com/fhoedemakers/pico-smsplus/releases/latest) page for the supported RP2040/RP2350 boards.
 
 ***
@@ -77,6 +81,8 @@ These boards already contain an RP2040 cpu, a separate Raspberry Pi Pico is not 
 - [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107)
   Use the breadboard config or Pimoroni Pico DV Demo base. This board does not fit the PCB because of the SP/CE connector on back of the board.
   The PSRAM on the board is used in stead of flash to load the roms from SD.
+- [Waveshare RP2350-PiZero](https://www.waveshare.com/rp2350-pizero.htm)
+
 
 ## Waveshare RP2040 & RP2350 Zero
 

@@ -58,22 +58,25 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Order must match enum in menu_options.h
 const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,                               // Exit Game, or back to menu. Always visible when in-game.
+    0,                               // Reset Game. Always visible when in-game.
     0,                               // Save / Restore State
     !HSTX,                           // Screen Mode (only when not HSTX)
     HSTX,                            // Scanlines toggle (only when HSTX)
     1,                               // FPS Overlay
     0,                               // Audio Enable
     0,                               // Frame Skip
-    (EXT_AUDIO_IS_ENABLED && !HSTX), // External Audio
+    (HSTX && ENABLEDVI),             // Display Mode HDMI or DVI
+    (EXT_AUDIO_IS_ENABLED),          // External Audio
     1,                               // Font Color
     1,                               // Font Back Color
     ENABLE_VU_METER,                 // VU Meter
-    (HW_CONFIG == 8),                // Fruit Jam Internal Speaker
+    //(HW_CONFIG == 8),              // Fruit Jam Internal Speaker
     (HW_CONFIG == 8),                // Fruit Jam Volume Control
     0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
     0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
     0,                               // Rapid Fire on A
     0,                               // Rapid Fire on B
+    1                                // Enter bootsel mode
 };
 const uint8_t g_available_screen_modes_sms[] = {
 #if PICO_RP2350
@@ -99,7 +102,8 @@ const uint8_t g_available_screen_modes_sms[] = {
 #define FPSSTART (((MARGINTOP + 7) / 8) * 8)
 #define FPSEND ((FPSSTART) + 8)
 
-bool reset = false;
+static bool reset = false;
+static bool resetGame = false;
 
 #if WII_PIN_SDA >= 0 and WII_PIN_SCL >= 0
 // Cached Wii pad state updated once per frame in ProcessAfterFrameIsRendered()
@@ -289,7 +293,22 @@ static void inline processaudioPerFrameDVI()
         written += n;
     }
 }
-#endif // !HSTX
+#else // !HSTX
+static void inline processaudioPerFrameHSTX() {
+     for (int i = 0; i < snd.bufsize; i++)
+    {
+        short l = snd.buffer[0][i];
+        short r = snd.buffer[1][i];
+        hstx_push_audio_sample(l >> 2, r >> 2);
+#if ENABLE_VU_METER
+        if (settings.flags.enableVUMeter)
+        {
+            addSampleToVUMeter(l);
+        }
+#endif
+    }
+}
+#endif
 static void inline processaudioPerFrameI2S()
 {
     for (int i = 0; i < snd.bufsize; i++)
@@ -479,7 +498,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
         sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
         if (buffer)
         {
-            for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
+            for (int i = screenCropX ; i < BMP_WIDTH - screenCropX; i++)
             {
                 sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
             }
@@ -508,7 +527,7 @@ extern "C" void in_ram(sms_render_line)(int line, const uint8_t *buffer)
     sbuffer = currentLineBuf + 32 + (IS_GG ? 48 : 0);
     if (buffer)
     {
-        for (int i = screenCropX + (IS_GG ? 0 : 8); i < BMP_WIDTH - screenCropX; i++)
+        for (int i = screenCropX ; i < BMP_WIDTH - screenCropX; i++)
         {
             sbuffer[i - screenCropX] = palette444[(buffer[i + BMP_X_OFFSET]) & 31];
         }
@@ -709,7 +728,9 @@ void loadoverlay()
 
 static inline int ProcessAfterFrameIsRendered()
 {
+    Frens::pollHeadPhoneJack();
     Frens::PaceFrames60fps(false);
+    //Frens::waitForVSync();
 #if NES_PIN_CLK != -1
     nespad_read_start();
 #endif
@@ -766,6 +787,10 @@ static inline int ProcessAfterFrameIsRendered()
         {
             loadSaveStateMenu = true;
             quickSaveAction = SaveStateTypes::NONE;
+        }
+        if ( rval == 5)
+        {
+            reset = resetGame = true;
         }
         loadoverlay();
     }
@@ -1055,22 +1080,20 @@ void in_ram(process)(void)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
         sms_frame(0);
-#if !HSTX
 #if EXT_AUDIO_IS_ENABLED
-        if (settings.flags.useExtAudio == 1)
+        if (settings.flags.useExtAudio == 1 || Frens::isHeadPhoneJackConnected())
         {
             processaudioPerFrameI2S();
-        }
-        else
-        {
-            processaudioPerFrameDVI();
-        }
-#else
-        processaudioPerFrameDVI();
+        } else
 #endif
+        {
+#if !HSTX
+            processaudioPerFrameDVI();
 #else
-        processaudioPerFrameI2S();
-#endif // !HSTX
+       
+            processaudioPerFrameHSTX();
+#endif 
+        }
         ProcessAfterFrameIsRendered();
     }
 }
@@ -1106,6 +1129,8 @@ int main()
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
 #if !HSTX
     scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
+#else
+    hstx_setScanLines(settings.flags.scanlineOn);
 #endif
     bool showSplash = true;
     g_settings_visibility = g_settings_visibility_sms;
@@ -1123,7 +1148,7 @@ int main()
         reset = false;
         fileSize = 0;
         isGameGear = false;
-        EXT_AUDIO_MUTE_INTERNAL_SPEAKER(settings.flags.fruitJamEnableInternalSpeaker == 0);
+        //EXT_AUDIO_MUTE_INTERNAL_SPEAKER(settings.flags.fruitJamEnableInternalSpeaker == 0);
         if (Frens::isPsramEnabled())
         {
             // Detect rom type from memory
@@ -1184,17 +1209,20 @@ int main()
         {
             printf("No auto-save configured for this ROM.\n");
         }
-        loadoverlay();
-        load_rom(ROM_FILE_ADDR, fileSize, isGameGear);
-        // Initialize all systems and power on
-        system_init(SMS_AUD_RATE);
-        // load state if any
-        // system_load_state();
-
-        system_reset();
-        printf("Starting game\n");
-        process();
-        system_shutdown();
+        do {
+            reset = resetGame = false;
+            loadoverlay();
+            load_rom(ROM_FILE_ADDR, fileSize, isGameGear); 
+            // Initialize all systems and power on
+            system_init(SMS_AUD_RATE);
+            // load state if any
+            // system_load_state();
+            system_reset();
+            printf("Starting game\n");
+            Frens::PaceFrames60fps(true); 
+            process();
+            system_shutdown();
+        } while (resetGame);
         selectedRom[0] = 0;
         showSplash = false;
 #if ENABLE_VU_METER
