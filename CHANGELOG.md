@@ -29,6 +29,7 @@ To enable audio over hdmi, make sure external audio is disabled in the settings 
 ## Fixes
 
 - Fix for losing signal on monitors: Removed _not_in_flash_func predicates from emulator code on RP2350. (???)
+- Fix save state regression introduced in v0.24: loading a save state caused a memory allocation  panic. Note: save states written by previous v0.25 dev builds are not compatible with this fix.
 
 # previous changes
 
