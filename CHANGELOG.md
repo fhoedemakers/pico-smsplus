@@ -1,10 +1,9 @@
 # CHANGELOG
 
-HSTX video and audio for supported boards
+> **HSTX replaces PicoDVI** on more boards, **HSTX now has picture and sound over HDMI**, in-game game reset, automatic headphone detection on Fruit Jam, and a save-state crash fix.
 
 # General Info
 
-> **In a nutshell:** **HSTX replaces PicoDVI** on more boards, **HSTX now has picture and sound over HDMI**, in-game game reset, automatic headphone detection on Fruit Jam, and a save-state crash fix.
 
 [Binaries for each configuration and PCB design are at the end of this page](#downloads___).
 
