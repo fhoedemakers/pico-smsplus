@@ -38,7 +38,9 @@ void system_init(int rate) {
     cachePtr = (int16 *)frens_f_malloc(512 * 4 * sizeof(int16));
     cacheStore = (uint8 *)frens_f_malloc(CACHEDTILES * 64 * sizeof(uint8));
     cacheStoreUsed = (uint8 *)frens_f_malloc(CACHEDTILES * sizeof(uint8));
-    if (!cachePtr || !cacheStore || !cacheStoreUsed) {
+    sms.ram  = (uint8 *)frens_f_malloc(RAMSIZEBYTES);
+    sms.sram = (uint8 *)frens_f_malloc(SRAMSIZEBYTES);
+    if (!cachePtr || !cacheStore || !cacheStoreUsed || !sms.ram || !sms.sram) {
         printf("Failed to allocate memory for cache\n");
         exit(1);
     }
@@ -121,6 +123,13 @@ void system_shutdown(void)
     frens_f_free(cachePtr);
     frens_f_free(sms.sram);
     frens_f_free(sms.ram);
+    snd.buffer[0] = NULL;
+    snd.buffer[1] = NULL;
+    cacheStoreUsed = NULL;
+    cacheStore = NULL;
+    cachePtr = NULL;
+    sms.sram = NULL;
+    sms.ram = NULL;
 
     if (snd.enabled)
     {
@@ -158,6 +167,20 @@ bool system_save_state(FIL *fd) {
     fr = f_write(fd, &sms, sizeof(t_sms), &bw);
     if (fr != FR_OK || bw != sizeof(t_sms)) {
         printf("Error writing SMS context: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)sizeof(t_sms));
+        return false;
+    }
+
+    /* Save SMS work RAM contents (sms.ram is a pointer; struct above only stores the address) */
+    fr = f_write(fd, sms.ram, RAMSIZEBYTES, &bw);
+    if (fr != FR_OK || bw != RAMSIZEBYTES) {
+        printf("Error writing SMS RAM: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)RAMSIZEBYTES);
+        return false;
+    }
+
+    /* Save SMS SRAM contents */
+    fr = f_write(fd, sms.sram, SRAMSIZEBYTES, &bw);
+    if (fr != FR_OK || bw != SRAMSIZEBYTES) {
+        printf("Error writing SMS SRAM: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)SRAMSIZEBYTES);
         return false;
     }
 
@@ -211,10 +234,32 @@ bool system_load_state(FIL *fd) {
         return false;
     }
 
-    /* Load SMS context */
+    /* Load SMS context — preserve runtime pointers across the struct read.
+       sms.dummy/ram/sram are pointers into local heap/static memory; the values
+       written to the save file at save time are stale and must not be used. */
+    uint8 *saved_dummy = sms.dummy;
+    uint8 *saved_ram   = sms.ram;
+    uint8 *saved_sram  = sms.sram;
     fr = f_read(fd, &sms, sizeof(t_sms), &br);
+    sms.dummy = saved_dummy;
+    sms.ram   = saved_ram;
+    sms.sram  = saved_sram;
     if (fr != FR_OK || br != sizeof(t_sms)) {
         printf("Error reading SMS context: fr=%d read=%u expected=%u\n", fr, br, (unsigned)sizeof(t_sms));
+        return false;
+    }
+
+    /* Load SMS work RAM contents */
+    fr = f_read(fd, sms.ram, RAMSIZEBYTES, &br);
+    if (fr != FR_OK || br != RAMSIZEBYTES) {
+        printf("Error reading SMS RAM: fr=%d read=%u expected=%u\n", fr, br, (unsigned)RAMSIZEBYTES);
+        return false;
+    }
+
+    /* Load SMS SRAM contents */
+    fr = f_read(fd, sms.sram, SRAMSIZEBYTES, &br);
+    if (fr != FR_OK || br != SRAMSIZEBYTES) {
+        printf("Error reading SMS SRAM: fr=%d read=%u expected=%u\n", fr, br, (unsigned)SRAMSIZEBYTES);
         return false;
     }
 
@@ -318,9 +363,9 @@ bool system_load_state(FIL *fd) {
             ym2413_write(0, 1, reg[i]);
         }
 #endif
+    }
     frens_f_free(reg);
     return true;
-    }
 }
 
 void ym2413_write(int chip, int offset, int data) {

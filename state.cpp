@@ -36,9 +36,8 @@ int Emulator_LoadState(const char* path)
         printf("Cannot open load state file: %d (%s)\n", fr, path);
         return -1;
     }
-    system_shutdown(); // shutdown before loading state
-    system_init(SMS_AUD_RATE); // re-init system
-    //system_reset(); // reset system
+    system_shutdown();          // tear down current emulator state
+    system_init(SMS_AUD_RATE);  // allocate fresh buffers (incl. sms.ram/sram)
     bool ok = system_load_state(fil);
     FRESULT frc = f_close(fil);
     Frens::f_free(fil);
