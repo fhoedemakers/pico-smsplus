@@ -1,6 +1,10 @@
 # CHANGELOG
 
+HSTX video and audio for supported boards
+
 # General Info
+
+> **In a nutshell:** **HSTX replaces PicoDVI** on more boards, **HSTX now has picture and sound over HDMI**, in-game game reset, automatic headphone detection on Fruit Jam, and a save-state crash fix.
 
 [Binaries for each configuration and PCB design are at the end of this page](#downloads___).
 
@@ -9,27 +13,82 @@
 
 # v0.25 Release notes
 
-For the boards that use HSTX in stead of PicoDVI: HDMI audio is now supported via the new HSTX video driver. Huge thanks to [@fliperama86](https://github.com/fliperama86) for the awesome [pico_hdmi](https://github.com/fliperama86/pico_hdmi) driver that made this possible and for helping out.
+This release replaces PicoDVI with HSTX on more boards, HSTX now also carries audio over HDMI,
+adds smoother on-screen motion, a few new in-game conveniences, and a
+handful of fixes that make the emulator more reliable in everyday use.
 
-- Adafruit Fruit Jam.
-- Murmulator M2. 
+A huge thank you to [@fliperama86](https://github.com/fliperama86) for the
+excellent [pico_hdmi](https://github.com/fliperama86/pico_hdmi) driver that
+made the new HDMI output possible, and for all the help along the way.
 
-Other RP2350 configurations that now use HSTX (GPIO 12 - 19) in stead of PicoDVI:
+## What's new
 
-- [Breadboard](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard)
-- [PCB](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#pcb-with-raspberry-pi-pico-or-pico-2)
+### Video and sound over a single HDMI cable
+
+On the technical side, several RP2350 board configurations have switched
+from the **PicoDVI** software-driven video output to **HSTX**, the
+RP2350's dedicated High-Speed Serial Transmit hardware (GPIO 12 – 19).
+HSTX has been used for video on some boards before, but in this release
+it also carries **audio embedded in the HDMI stream** for the first
+time — that's the new capability HSTX gains here. (PicoDVI has always
+been able to embed audio; HSTX is just catching up on that front while
+offloading the work from the CPU to dedicated hardware.)
+
+In practice, on these boards picture and sound now travel together over a
+single HDMI cable — no separate audio jack needed:
+
+- Adafruit Fruit Jam
+- Murmulator M2
+
+These RP2350 boards have also been switched from PicoDVI to HSTX. They
+keep using a separate audio output for now, but picture quality should
+look the same and the change frees up CPU cycles for future improvements:
+
+- [Breadboard build](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard)
+- [PCB build](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#pcb-with-raspberry-pi-pico-or-pico-2)
 - [Adafruit Metro RP2350](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#adafruit-metro-rp2350)
-  
-All the other boards still use PicoDVI.
 
-To enable audio over hdmi, make sure external audio is disabled in the settings menu.
+All other boards continue to use PicoDVI and work as before.
 
-- Added option in settings menu to enter bootsel mode for flashing firmware. 
+### Smoother gameplay
+
+Frame timing now follows the display's own refresh signal, which removes
+small stutters and gives the picture a more consistent, smooth feel.
+
+### New options and conveniences
+
+- **Reset the running game** from the in-game menu — no need to power-cycle
+  the device to restart.
+- **Enter flashing mode from the settings menu**, so you can update the
+  firmware without having to unplug the device and hold the BOOTSEL button.
+- **Scanline effect for HDMI boards** — turn on the classic CRT scanline
+  look from the settings menu when running on an HDMI-capable board.
+
+### Adafruit Fruit Jam
+
+- **Automatic headphone detection.** Plug headphones in and the built-in
+  speaker mutes itself; unplug them and the speaker comes back. The old
+  manual mute setting and pushbutton-1 mute shortcut have been removed —
+  they are no longer needed.
 
 ## Fixes
 
-- Fix for losing signal on monitors: Removed _not_in_flash_func predicates from emulator code on RP2350. (???)
-- Fix save state regression introduced in v0.24: loading a save state caused a memory allocation  panic. Note: save states written by previous v0.25 dev builds are not compatible with this fix.
+- **Save states work again.** A bug introduced in v0.24 could crash the
+  emulator when loading a saved game. This is now fixed. Note: save state
+  files created by earlier v0.25 development builds are not compatible
+  with this fix and will need to be re-created.
+- **Picture-loss recovery.** On the new HSTX output when set to
+  video-only (DVI) mode, the monitor could occasionally lose the picture.
+  The emulator now detects this and automatically restores the signal
+  without needing a restart. (Not observed in full HDMI mode, but the
+  same safety net is enabled there too just in case.)
+- **Screen cropping fix.** A small visual glitch where part of the game
+  picture was being cut off incorrectly has been corrected.
+
+## Credits
+
+Updated to acknowledge new contributors — see the splash screen on
+startup.
 
 # previous changes
 
