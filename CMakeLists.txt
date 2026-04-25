@@ -101,7 +101,7 @@ target_compile_definitions(${projectname} PUBLIC
     ENABLE_VU_METER=${ENABLE_VU_METER} # Enable VU meter (fruitjam NeoPixel leds)
     WIIPAD_DELAYED_START=${WIIPAD_DELAYED_START}
     #HSTX_DEBUG=1
-    #ENABLEDVI=1
+    ENABLEDVI=1
     #PICO_DEBUG_MALLOC=1
 )
 if(NOT PICO_PLATFORM STREQUAL "rp2040")
