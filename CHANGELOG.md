@@ -22,7 +22,7 @@ made the new HDMI output possible, and for all the help along the way.
 
 ## What's new
 
-### Video and sound over a single HDMI cable
+### HSTX Video and sound over HDMI
 
 On the technical side, several RP2350 board configurations have switched
 from the **PicoDVI** software-driven video output to **HSTX**, the
