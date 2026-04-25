@@ -39,9 +39,7 @@ single HDMI cable — no separate audio jack needed:
 - Adafruit Fruit Jam
 - Murmulator M2
 
-These RP2350 boards have also been switched from PicoDVI to HSTX. They
-keep using a separate audio output for now, but picture quality should
-look the same and the change frees up CPU cycles for future improvements:
+These RP2350 boards have also been switched from PicoDVI to HSTX. (Video and sound):
 
 - [Breadboard build](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard)
 - [PCB build](https://github.com/fhoedemakers/pico-infonesPlus?tab=readme-ov-file#pcb-with-raspberry-pi-pico-or-pico-2)
