@@ -266,6 +266,27 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     }
 }
 
+/* One-pole DC-blocker (R = 1 - 1/512, ~14 Hz cutoff). PSG output is
+   unsigned positive; without this the ~16k DC offset causes thumps and
+   eats DAC headroom. Shift-only so RP2040 M0+ pays no multiply cost. */
+static inline void psg_postprocess(short raw_l, short raw_r,
+                                   short *out_l, short *out_r)
+{
+    static int32_t prev_l = 0, prev_r = 0;
+    static int32_t dc_l   = 0, dc_r   = 0;
+    int32_t xl = (int32_t)(uint16_t)raw_l;
+    int32_t xr = (int32_t)(uint16_t)raw_r;
+    int32_t yl = xl - prev_l + dc_l - (dc_l >> 9);
+    int32_t yr = xr - prev_r + dc_r - (dc_r >> 9);
+    prev_l = xl; prev_r = xr;
+    dc_l   = yl; dc_r   = yr;
+    yl >>= 1;    yr >>= 1;
+    if (yl > 32767) yl = 32767; else if (yl < -32768) yl = -32768;
+    if (yr > 32767) yr = 32767; else if (yr < -32768) yr = -32768;
+    *out_l = (short)yl;
+    *out_r = (short)yr;
+}
+
 #if !HSTX
 #define DVILOGDROPPEDSAMPLES 0
 static void inline processaudioPerFrameDVI()
@@ -292,9 +313,11 @@ static void inline processaudioPerFrameDVI()
         auto p = ring.getWritePointer();
         for (int i = 0; i < n; ++i)
         {
-            int l = snd.buffer[0][written + i];
-            int r = snd.buffer[1][written + i];
-            *p++ = {static_cast<short>(l), static_cast<short>(r)};
+            short l = snd.buffer[0][written + i];
+            short r = snd.buffer[1][written + i];
+            short ol, or_;
+            psg_postprocess(l, r, &ol, &or_);
+            *p++ = {ol, or_};
         }
         ring.advanceWritePointer(n);
         written += n;
@@ -306,11 +329,13 @@ static void inline processaudioPerFrameHSTX() {
     {
         short l = snd.buffer[0][i];
         short r = snd.buffer[1][i];
-        hstx_push_audio_sample(l >> 2, r >> 2);
+        short ol, or_;
+        psg_postprocess(l, r, &ol, &or_);
+        hstx_push_audio_sample(ol, or_);
 #if ENABLE_VU_METER
         if (settings.flags.enableVUMeter)
         {
-            addSampleToVUMeter(l);
+            addSampleToVUMeter(ol);
         }
 #endif
     }
@@ -322,11 +347,13 @@ static void inline processaudioPerFrameI2S()
     {
         short l = snd.buffer[0][i];
         short r = snd.buffer[1][i];
-        EXT_AUDIO_ENQUEUE_SAMPLE(l >> 2, r >> 2);
+        short ol, or_;
+        psg_postprocess(l, r, &ol, &or_);
+        EXT_AUDIO_ENQUEUE_SAMPLE(ol, or_);
 #if ENABLE_VU_METER
         if (settings.flags.enableVUMeter)
         {
-            addSampleToVUMeter(l);
+            addSampleToVUMeter(ol);
         }
 #endif
     }

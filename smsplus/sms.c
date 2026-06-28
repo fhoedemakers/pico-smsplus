@@ -27,6 +27,12 @@ void in_ram(sms_frame)(int skip_render) {
 
     if (snd.log) snd.callback(0x00);
 
+    /* Render audio per-scanline so that Z80 writes to PSG registers
+       (e.g. Game Gear PCM speech streaming) modulate the output stream
+       within a frame instead of being collapsed to a single end-of-frame
+       sample-and-hold. 262 lines × 60 fps = 15.72 kHz update rate. */
+    int samples_rendered = 0;
+
     for (vdp.line = 0; vdp.line < 262; vdp.line += 1) {
         /* Handle VDP line events */
         vdp_run();
@@ -36,37 +42,21 @@ void in_ram(sms_frame)(int skip_render) {
 
         /* Run the Z80 for a line */
         z80_execute(227);
-    }
 
-    /* Update the emulated sound stream */
-    if (snd.enabled) {
-/*
-        int count;
-
-        SN76496Update(0, snd.psg_buffer, snd.bufsize, sms.psg_mask);
-
-//        if(sms.use_fm)
-//        {
-//            int i;
-//            for(i = 0; i < snd.bufsize; i++)
-//            {
-//                snd.fm_buffer[i] = OPLL_calc(opll);
-//            }
-//        }
-
-        for(count = 0; count < snd.bufsize; count += 1)
-        {
-            signed short left   = 0;
-            signed short right  = 0;
-//            left = right = snd.fm_buffer[count];
-			left=0;
-            left  += snd.psg_buffer[0][count];
-            right += snd.psg_buffer[1][count];
-            snd.buffer[0][count] = left;
-            snd.buffer[1][count] = right;
+        /* Render the audio samples that correspond to this scanline.
+           Accumulator math guarantees Σ samples_this_line == snd.bufsize. */
+        if (snd.enabled) {
+            int target = (vdp.line + 1) * snd.bufsize / 262;
+            int n = target - samples_rendered;
+            if (n > 0) {
+                INT16 *part[2] = {
+                    snd.buffer[0] + samples_rendered,
+                    snd.buffer[1] + samples_rendered
+                };
+                SN76496Update(0, part, n, sms.psg_mask);
+                samples_rendered = target;
+            }
         }
-*/
-        SN76496Update(0, snd.buffer, snd.bufsize, sms.psg_mask);
     }
 }
 
