@@ -51,7 +51,7 @@ extern const unsigned char EmuOverlay_555[];
 // #endif
 #define AUDIOBUFFERSIZE 1024
 
-#define EMULATOR_CLOCKFREQ_KHZ 387000 //  Overclock frequency in kHz when using Emulator
+#define EMULATOR_CLOCKFREQ_KHZ 378000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Visibility configuration for options menu (NES specific)
 // 1 = show option line, 0 = hide.
@@ -271,21 +271,27 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     }
 }
 
-/* One-pole DC-blocker (R = 1 - 1/512, ~14 Hz cutoff). PSG output is
-   unsigned positive; without this the ~16k DC offset causes thumps and
-   eats DAC headroom. Shift-only so RP2040 M0+ pays no multiply cost. */
+/* One-pole DC-blocker (R = 1 - 1/512, ~14 Hz cutoff). PSG-only output is
+   unsigned 0..0x7FFF; PSG+FM mix is signed int16. Sign-extend raw_l/r
+   directly — an unsigned cast wraps negative FM peaks to large positives
+   and corrupts the filter state with spurious step inputs. The clamp at
+   the end catches the rare PSG+FM peaks that exceed int16. */
 static inline void psg_postprocess(short raw_l, short raw_r,
                                    short *out_l, short *out_r)
 {
     static int32_t prev_l = 0, prev_r = 0;
     static int32_t dc_l   = 0, dc_r   = 0;
-    int32_t xl = (int32_t)(uint16_t)raw_l;
-    int32_t xr = (int32_t)(uint16_t)raw_r;
+    int32_t xl = (int32_t)raw_l;
+    int32_t xr = (int32_t)raw_r;
     int32_t yl = xl - prev_l + dc_l - (dc_l >> 9);
     int32_t yr = xr - prev_r + dc_r - (dc_r >> 9);
     prev_l = xl; prev_r = xr;
     dc_l   = yl; dc_r   = yr;
-    yl >>= 1;    yr >>= 1;
+    /* +3.5 dB makeup gain (×1.5). PSG-only peaks land near -2.5 dBFS,
+       FM-mixed peaks near -3.5 dBFS — comfortable below the int16 ceiling
+       so the clamp rarely fires in practice. */
+    yl = yl + (yl >> 1);
+    yr = yr + (yr >> 1);
     if (yl > 32767) yl = 32767; else if (yl < -32768) yl = -32768;
     if (yr > 32767) yr = 32767; else if (yr < -32768) yr = -32768;
     *out_l = (short)yl;
