@@ -48,6 +48,9 @@ extern "C" {
 #include "render.h"
 #include "sn76496.h"
 #include "system.h"
+#if PICO_RP2350
+#include "emu2413/emu2413.h"
+#endif
 
 char unalChar(const char *adr);
 

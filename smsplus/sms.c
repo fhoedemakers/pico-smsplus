@@ -54,6 +54,7 @@ void in_ram(sms_frame)(int skip_render) {
                     snd.buffer[1] + samples_rendered
                 };
                 SN76496Update(0, part, n, sms.psg_mask);
+                system_mix_fm(part[0], part[1], n);
                 samples_rendered = target;
             }
         }

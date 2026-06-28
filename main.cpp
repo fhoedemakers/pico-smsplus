@@ -51,7 +51,7 @@ extern const unsigned char EmuOverlay_555[];
 // #endif
 #define AUDIOBUFFERSIZE 1024
 
-#define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
+#define EMULATOR_CLOCKFREQ_KHZ 387000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Visibility configuration for options menu (NES specific)
 // 1 = show option line, 0 = hide.
@@ -82,6 +82,11 @@ const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,                               // Auto Swap FDS, enabled at runtime on RP2350
     0,                               // FDS Disk Swap (toggled on after fdsParse succeeds)
     0,                               // Overclock (CPU high clock toggle)
+#if PICO_RP2350
+    1,                               // YM2413 FM (SMS only, RP2350-only)
+#else
+    0,
+#endif
     1,                               // Enter bootsel mode
    
 };
@@ -1113,6 +1118,9 @@ void in_ram(process)(void)
     while (reset == false)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
+#if PICO_RP2350
+        sms.use_fm = settings.flags.useFM;
+#endif
         sms_frame(0);
 #if EXT_AUDIO_IS_ENABLED
         if (settings.flags.useExtAudio == 1 || Frens::isHeadPhoneJackConnected())
@@ -1146,7 +1154,7 @@ int main()
     int fileSize = 0;
     isGameGear = false;
 
-    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
+    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_60);
 
     printf("==========================================================================================\n");
     printf("Pico-SMS+ %s\n", SWVERSION);

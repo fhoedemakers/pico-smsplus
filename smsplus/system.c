@@ -24,7 +24,22 @@ t_bitmap bitmap;
 t_cart cart;
 t_snd snd;
 t_input input;
-//OPLL *opll;
+
+#if PICO_RP2350
+OPLL *opll = NULL;
+static uint8_t ym2413_regs[0x40] = {0}; /* shadow register file for savestate */
+static int fm_active = 0;               /* set on first FM write; gates per-sample OPLL_calc */
+static int ym2413_latch = 0;
+/* OPLL runs at its native rate (clk/72 ≈ 49716 Hz at MASTER_CLOCK = 3579545)
+   so the upstream rate converter is bypassed entirely — that path used
+   software-emulated double-precision math (sinc + floor) which alone cost
+   ~15% of the 252 MHz frame budget. We resample to 44100 here using a
+   Q16 accumulator (zero-order hold; FM is band-limited enough to tolerate it). */
+#define FM_NATIVE_RATE  (MASTER_CLOCK / 72)
+#define FM_RESAMPLE_STEP_Q16 ((uint32_t)((((uint64_t)FM_NATIVE_RATE) << 16) / SMS_AUD_RATE))
+static uint32_t fm_resample_acc = 0;
+static int16_t fm_last_sample = 0;
+#endif
 
 struct {
     char reg[64];
@@ -32,6 +47,7 @@ struct {
 
 void *frens_f_malloc(size_t size);
 void frens_f_free(void *ptr);
+void ym2413_write(int chip, int offset, int data);
 void system_init(int rate) {
 
     // initialize memory
@@ -87,26 +103,23 @@ void system_audio_init(int rate) {
     __builtin_memset(snd.buffer[0], 0, snd.bufsize * 2);
     __builtin_memset(snd.buffer[1], 0, snd.bufsize * 2);
 
-    /* YM2413 sound stream */
-//    snd.fm_buffer = (signed short int *)malloc(snd.bufsize * 2);
-//    if(!snd.fm_buffer) return;
-//    memset(snd.fm_buffer, 0, snd.bufsize * 2);
-
-    /* SN76489 sound stream */
-//    snd.psg_buffer[0] = (signed short int *)malloc(snd.bufsize * 2);
-//    snd.psg_buffer[1] = (signed short int *)malloc(snd.bufsize * 2);
-//    if(!snd.psg_buffer[0] || !snd.psg_buffer[1]) return;
-//    memset(snd.psg_buffer[0], 0, snd.bufsize * 2);
-//    memset(snd.psg_buffer[1], 0, snd.bufsize * 2);
-
     /* Set up SN76489 emulation */
     SN76496_init(0, MASTER_CLOCK, 255, rate);
 
-    /* Set up YM2413 emulation */
-//    OPLL_init(3579545, rate) ;
-//    opll = OPLL_new() ;
-//    OPLL_reset(opll) ;
-//    OPLL_reset_patch(opll,0) ;            /* if use default voice data. */ 
+#if PICO_RP2350
+    /* Set up YM2413 emulation (RP2350 only). Pass FM_NATIVE_RATE so upstream
+       skips its expensive sinc rate converter; we resample in system_mix_fm. */
+    opll = OPLL_new(MASTER_CLOCK, FM_NATIVE_RATE);
+    if (opll) {
+        OPLL_resetPatch(opll, OPLL_2413_TONE);
+        OPLL_reset(opll);
+    }
+    fm_active = 0;
+    ym2413_latch = 0;
+    fm_resample_acc = 0;
+    fm_last_sample = 0;
+    __builtin_memset(ym2413_regs, 0, sizeof(ym2413_regs));
+#endif
 
     /* Inform other functions that we can use sound */
     snd.enabled = 1;
@@ -133,8 +146,13 @@ void system_shutdown(void)
 
     if (snd.enabled)
     {
-        //        OPLL_delete(opll);
-        //        OPLL_close();
+#if PICO_RP2350
+        if (opll) {
+            OPLL_delete(opll);
+            opll = NULL;
+        }
+        fm_active = 0;
+#endif
     }
 }
 
@@ -147,8 +165,17 @@ void system_reset(void) {
     render_reset();
     system_load_sram();
     if (snd.enabled) {
-//        OPLL_reset(opll) ;
-//        OPLL_reset_patch(opll,0) ;            /* if use default voice data. */ 
+#if PICO_RP2350
+        if (opll) {
+            OPLL_reset(opll);
+            OPLL_resetPatch(opll, OPLL_2413_TONE);
+        }
+        fm_active = 0;
+        ym2413_latch = 0;
+        fm_resample_acc = 0;
+        fm_last_sample = 0;
+        __builtin_memset(ym2413_regs, 0, sizeof(ym2413_regs));
+#endif
     }
 }
 
@@ -196,9 +223,13 @@ bool system_save_state(FIL *fd) {
         return false;
     }
 
-    /* Save YM2413 registers */
-    // Note: not used
+    /* Save YM2413 registers: on RP2350 we save the shadow register file; on
+       RP2040 we write 64 zero bytes so the format stays binary-compatible. */
+#if PICO_RP2350
+    fr = f_write(fd, ym2413_regs, 0x40, &bw);
+#else
     fr = f_write(fd, &ym2413.reg[0], 0x40, &bw);
+#endif
     if (fr != FR_OK || bw != 0x40) {
         printf("Error writing YM2413 regs: fr=%d wrote=%u expected=%u\n", fr, bw, (unsigned)0x40);
         return false;
@@ -326,41 +357,32 @@ bool system_load_state(FIL *fd) {
 
     /* Restore sound state */
     if (snd.enabled) {
-#if 0
-        /* Clear YM2413 context */
-        OPLL_reset(opll) ;
-        OPLL_reset_patch(opll,0) ;            /* if use default voice data. */ 
+#if PICO_RP2350
+        if (opll) {
+            OPLL_reset(opll);
+            OPLL_resetPatch(opll, OPLL_2413_TONE);
 
-        /* Restore rhythm enable first */
-        ym2413_write(0, 0, 0x0E);
-        ym2413_write(0, 1, reg[0x0E]);
-
-        /* User instrument settings */
-        for(i = 0x00; i <= 0x07; i += 1)
-        {
-            ym2413_write(0, 0, i);
-            ym2413_write(0, 1, reg[i]);
-        }
-
-        /* Channel frequency */
-        for(i = 0x10; i <= 0x18; i += 1)
-        {
-            ym2413_write(0, 0, i);
-            ym2413_write(0, 1, reg[i]);
-        }
-
-        /* Channel frequency + ctrl. */
-        for(i = 0x20; i <= 0x28; i += 1)
-        {
-            ym2413_write(0, 0, i);
-            ym2413_write(0, 1, reg[i]);
-        }
-
-        /* Instrument and volume settings  */
-        for(i = 0x30; i <= 0x38; i += 1)
-        {
-            ym2413_write(0, 0, i);
-            ym2413_write(0, 1, reg[i]);
+            /* Replay register file in the order the chip expects:
+               rhythm flags first, then user instrument, frequency,
+               key-on/block, instrument+volume. */
+            ym2413_write(0, 0, 0x0E);
+            ym2413_write(0, 1, reg[0x0E]);
+            for (i = 0x00; i <= 0x07; i += 1) {
+                ym2413_write(0, 0, i);
+                ym2413_write(0, 1, reg[i]);
+            }
+            for (i = 0x10; i <= 0x18; i += 1) {
+                ym2413_write(0, 0, i);
+                ym2413_write(0, 1, reg[i]);
+            }
+            for (i = 0x20; i <= 0x28; i += 1) {
+                ym2413_write(0, 0, i);
+                ym2413_write(0, 1, reg[i]);
+            }
+            for (i = 0x30; i <= 0x38; i += 1) {
+                ym2413_write(0, 0, i);
+                ym2413_write(0, 1, reg[i]);
+            }
         }
 #endif
     }
@@ -368,12 +390,51 @@ bool system_load_state(FIL *fd) {
     return true;
 }
 
+void in_ram(system_mix_fm)(signed short *left, signed short *right, int n) {
+#if PICO_RP2350
+    if (!sms.use_fm || !fm_active || !opll) return;
+    uint32_t acc = fm_resample_acc;
+    int16_t last = fm_last_sample;
+    for (int i = 0; i < n; ++i) {
+        /* Advance FM by one output sample's worth of native ticks.
+           Step is ~49716/44100 ≈ 1.127 in Q16; sometimes 1 call, sometimes 2. */
+        acc += FM_RESAMPLE_STEP_Q16;
+        while (acc >= (1u << 16)) {
+            last = OPLL_calc(opll);
+            acc -= (1u << 16);
+        }
+        int32_t fm = (int32_t)last;
+        int32_t l = (int32_t)left[i]  + fm;
+        int32_t r = (int32_t)right[i] + fm;
+        if (l > 32767) l = 32767; else if (l < -32768) l = -32768;
+        if (r > 32767) r = 32767; else if (r < -32768) r = -32768;
+        left[i]  = (signed short)l;
+        right[i] = (signed short)r;
+    }
+    fm_resample_acc = acc;
+    fm_last_sample = last;
+#else
+    (void)left; (void)right; (void)n;
+#endif
+}
+
 void ym2413_write(int chip, int offset, int data) {
-//    static uint8 latch = 0;
-//    if(offset & 1)
-//        OPLL_writeReg(opll, latch, data);
-//    else
-//        latch = data;
+#if PICO_RP2350
+    if (!opll) return;
+    if (offset & 1) {
+        /* data write */
+        if (ym2413_latch < 0x40) {
+            ym2413_regs[ym2413_latch] = (uint8_t)data;
+        }
+        OPLL_writeReg(opll, (uint32_t)ym2413_latch, (uint8_t)data);
+        fm_active = 1;
+    } else {
+        /* address latch */
+        ym2413_latch = data & 0x3F;
+    }
+#else
+    (void)chip; (void)offset; (void)data;
+#endif
 }
 
 
