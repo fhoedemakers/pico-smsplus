@@ -51,7 +51,7 @@ extern const unsigned char EmuOverlay_555[];
 // #endif
 #define AUDIOBUFFERSIZE 1024
 
-#define EMULATOR_CLOCKFREQ_KHZ 378000 //  Overclock frequency in kHz when using Emulator
+#define EMULATOR_CLOCKFREQ_KHZ 252000 //  Overclock frequency in kHz when using Emulator
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Visibility configuration for options menu (NES specific)
 // 1 = show option line, 0 = hide.
@@ -1160,7 +1160,20 @@ int main()
     int fileSize = 0;
     isGameGear = false;
 
-    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_60);
+    vreg_voltage voltage = VREG_VOLTAGE_1_20;
+#if PICO_RP2350
+    Frens::FlashParams *flashParams;
+    // assign flashParams to point to flash location
+    bool freqOverruled = false;
+    flashParams = (Frens::FlashParams *)FLASHPARAM_ADDRESS;
+    if ( Frens::validateFlashParams(*flashParams) ) {
+        CPUFreqKHz = flashParams->cpuFreqKHz;
+        voltage = flashParams->voltage;
+        freqOverruled = true;
+    }
+#endif
+    Frens::setClocksAndStartStdio(CPUFreqKHz, voltage);
+
 
     printf("==========================================================================================\n");
     printf("Pico-SMS+ %s\n", SWVERSION);
@@ -1186,7 +1199,7 @@ int main()
     while (true)
     {
         #if 1
-        if (strlen(selectedRom) == 0 || reset == true)
+        if (strlen(selectedRom) == 0 || reset == true )
         {
             menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
@@ -1267,6 +1280,18 @@ int main()
             // system_load_state();
             system_reset();
             printf("Starting game\n");
+                        // After a non-PSRAM reboot the monitor needs time to sync with the
+            // fresh HDMI signal.  Without a delay the FDS BIOS intro animation
+            // plays while the display is still dark.  Only needed on the very
+            // first launch (showSplash is true); resets keep the link up.
+            // This also benefits RP2040/RP2350: .nsf files don't clip sound at the start, roms that 
+            // start with sound also don't clip sound.
+            if (showSplash && !Frens::isPsramEnabled())
+            {
+                showSplash = false;
+                printf("Feeding blank frames for display sync...\n");
+                menuPumpBlankFrames(180);
+            }
             Frens::PaceFrames60fps(true); 
             process();
             system_shutdown();
