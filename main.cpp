@@ -1138,9 +1138,8 @@ void in_ram(process)(void)
 #if !HSTX
             processaudioPerFrameDVI();
 #else
-       
             processaudioPerFrameHSTX();
-#endif 
+#endif
         }
         ProcessAfterFrameIsRendered();
     }
