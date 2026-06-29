@@ -360,6 +360,11 @@ static void inline processaudioPerFrameI2S()
         short r = snd.buffer[1][i];
         short ol, or_;
         psg_postprocess(l, r, &ol, &or_);
+        /* I2S DAC feeds an amp/headphone directly with no downstream volume
+           control, and the SMS+FM mix peaks much hotter than the NES mixer
+           pico_shared was tuned for — cut -6 dB here. */
+        ol = (short)(ol >> 1);
+        or_ = (short)(or_ >> 1);
         EXT_AUDIO_ENQUEUE_SAMPLE(ol, or_);
 #if ENABLE_VU_METER
         if (settings.flags.enableVUMeter)
