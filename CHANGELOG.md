@@ -1,6 +1,6 @@
 # CHANGELOG
 
-> **HSTX replaces PicoDVI** on more boards, **HSTX now has picture and sound over HDMI**, in-game game reset, automatic headphone detection on Fruit Jam, and a save-state crash fix.
+> **YM2413 FM sound** for Japanese SMS games (RP2350), **Game Gear digitized speech fixed** (Sonic 2 "Segaaaa", etc.), and cleaner audio output with no more boot thump.
 
 # General Info
 
@@ -9,6 +9,73 @@
 
 
 [See setup section in in Pico-infoNesPlus readme how to install and wire up](https://github.com/fhoedemakers/pico-infonesPlus#pico-setup)
+
+# v0.26 Release notes
+
+This release is mostly about **sound**. Japanese Master System games gain
+their proper FM voice, Game Gear games with sampled speech finally sound
+right, and the audio path itself has been cleaned up so the emulator no
+longer thumps on boot and FM peaks no longer distort.
+
+## What's new
+
+### YM2413 FM sound for Japanese SMS games (RP2350 only)
+
+Japanese Master System cartridges that use the YM2413 (OPLL) FM sound
+chip — *Phantasy Star*, *Wonder Boy III: The Dragon's Trap*, *Ys*,
+*After Burner* and many others — now play with their original FM
+instruments instead of the PSG fallback. Built on the vendored
+[emu2413](https://github.com/digital-sound-antiques/emu2413) core by
+Mitsutaka Okazaki.
+
+FM can be toggled in the settings menu. RP2040 builds are unchanged
+(FM is not enabled there for performance reasons).
+
+### Game Gear digitized speech fixed
+
+Game Gear games such as *Sonic the Hedgehog 2* stream digitized speech
+by rapidly changing PSG channel volume mid-frame. The old once-per-frame
+audio renderer collapsed all of those writes into a single sample and
+reduced the famous "Segaaaa" intro to a crackle. Audio is now rendered
+per scanline (~15.7 kHz effective update rate), so sampled speech and
+sound effects come through cleanly.
+
+### Cleaner audio output
+
+- **No more boot thump.** A DC offset that produced a loud pop on
+  startup has been removed by a small one-pole high-pass (DC blocker)
+  on the DVI/HSTX/I2S audio outputs.
+- **Recovered headroom.** With the DC offset gone, the previous safety
+  attenuation has been halved, so the audio is noticeably louder
+  without clipping.
+- **FM peaks no longer distort.** A signed/unsigned bug in the DC
+  blocker would wrap loud FM notes into broadband noise; fixed so the
+  FM and PSG channels mix cleanly.
+
+### Under the hood
+
+- **Automatic overclock when FM is on (RP2350).** The default clock
+  stays at 252 MHz; enabling YM2413 FM (or the existing overclock
+  setting) bumps the chip to 378 MHz on HSTX boards and 324 MHz on
+  PicoDVI boards to cover the extra DSP work. The HSTX value of
+  378 MHz is a multiple of 126 MHz, so the HSTX clock stays on its
+  clean path and HDMI audio timing is preserved.
+- **128 KB RAM reclaimed on RP2350.** The FM core's largest lookup
+  table is now pre-computed at build time and stored in flash instead
+  of being built in RAM at startup.
+- **Audio frame pacing on RP2040.** A small number of blank frames are
+  now pumped out around mode changes to keep audio in lock-step with
+  the display.
+
+## Fixes
+
+- Internal settings-visibility table cleaned up so menu entries appear
+  on exactly the boards that support them.
+
+## Credits
+
+Mitsutaka Okazaki for the [emu2413](https://github.com/digital-sound-antiques/emu2413)
+
 
 # v0.25 Release notes
 
