@@ -14,14 +14,14 @@ message("* Current build type is : ${CMAKE_BUILD_TYPE}")
 
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 8 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if (NOT USE_HSTX)
     set(USE_HSTX 1 CACHE STRING "Use HSTX for display output when possible")
 endif()
 include("pico_shared/BoardConfigs.cmake")
 if (NOT PICO_BOARD )
-    set(PICO_BOARD pico2 CACHE STRING "Board type")
+    set(PICO_BOARD pico CACHE STRING "Board type")
     message("PICO_BOARD not set, using default: ${PICO_BOARD}")
 endif()
 add_definitions( -DNDEBUG )
@@ -81,12 +81,12 @@ pico_set_program_version(${projectname} "0.1")
 
 # disable uart output for Pimoronis Pico DV Demo Base, as gpio 1 is used for NES controller
 # so debug messages will not be visible on the serial console.
-if ( HW_CONFIG EQUAL 1 )
-    message("Disabling UART output for Pimoroni Pico DV Demo Base")
-    pico_enable_stdio_uart(${projectname} 0)
-else()
+# if ( HW_CONFIG EQUAL 1 )
+#     message("Disabling UART output for Pimoroni Pico DV Demo Base")
+#     pico_enable_stdio_uart(${projectname} 0)
+#else()
     pico_enable_stdio_uart(${projectname} 1)
-endif()
+#endif()
 pico_enable_stdio_usb(${projectname} 0)
 
 # ---------------------------------------------------------------------------
