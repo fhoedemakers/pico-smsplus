@@ -19,7 +19,7 @@ longer thumps on boot and FM peaks no longer distort.
 
 ## What's new
 
-### YM2413 FM sound for Japanese SMS games (RP2350 only)
+### YM2413 FM sound for Japanese SMS games (RP2350 only in certain board config)
 
 Japanese Master System cartridges that use the YM2413 (OPLL) FM sound
 chip — *Phantasy Star*, *Wonder Boy III: The Dragon's Trap*, *Ys*,
