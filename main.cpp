@@ -82,8 +82,8 @@ const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,                               // Auto Swap FDS, enabled at runtime on RP2350
     0,                               // FDS Disk Swap (toggled on after fdsParse succeeds)
     0,                               // Overclock (CPU high clock toggle)
-#if PICO_RP2350
-    1,                               // YM2413 FM (SMS only, RP2350-only)
+#if HSTX
+    1,                               // YM2413 FM (SMS only, RP2350-only with HSTX)
 #else
     0,
 #endif
