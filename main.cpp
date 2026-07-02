@@ -1165,7 +1165,7 @@ int main()
     isGameGear = false;
 
     vreg_voltage voltage = VREG_VOLTAGE_1_20;
-#if PICO_RP2350
+#if HSTX
     Frens::FlashParams *flashParams;
     // assign flashParams to point to flash location
     bool freqOverruled = false;
