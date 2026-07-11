@@ -71,6 +71,7 @@ sound effects come through cleanly.
 
 - Internal settings-visibility table cleaned up so menu entries appear
   on exactly the boards that support them.
+- The border overlay now shows up reliably when starting a game.
 
 ## Credits
 
