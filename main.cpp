@@ -1276,7 +1276,7 @@ int main()
         }
         do {
             reset = resetGame = false;
-            loadoverlay();
+          
             load_rom(ROM_FILE_ADDR, fileSize, isGameGear); 
             // Initialize all systems and power on
             system_init(SMS_AUD_RATE);
@@ -1296,6 +1296,7 @@ int main()
                 printf("Feeding blank frames for display sync...\n");
                 menuPumpBlankFrames(180);
             }
+            loadoverlay();
             Frens::PaceFrames60fps(true); 
             process();
             system_shutdown();
