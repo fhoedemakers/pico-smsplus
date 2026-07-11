@@ -7,8 +7,7 @@
 
 [Binaries for each configuration and PCB design are at the end of this page](#downloads___).
 
-
-[See setup section in in Pico-infoNesPlus readme how to install and wire up](https://github.com/fhoedemakers/pico-infonesPlus#pico-setup)
+For board-by-board wiring, supported display modes and more refer to the [pico-infonesPlus documentation](https://github.com/fhoedemakers/pico-infonesPlus#setup). The set of supported boards and their pinouts is identical between the two projects.
 
 # v0.26 Release notes
 
