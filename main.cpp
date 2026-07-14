@@ -88,6 +88,7 @@ const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,
 #endif
     1,                               // Enter bootsel mode
+    1,                               // Controller Test
    
 };
 const uint8_t g_available_screen_modes_sms[] = {
