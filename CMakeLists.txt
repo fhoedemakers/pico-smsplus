@@ -14,24 +14,58 @@ message("* Current build type is : ${CMAKE_BUILD_TYPE}")
 
 
 if (NOT HW_CONFIG)
-    set(HW_CONFIG 8 CACHE STRING "Select the hardware configuration for your board")       
+    set(HW_CONFIG 1 CACHE STRING "Select the hardware configuration for your board")       
 endif()
 if (NOT USE_HSTX)
     set(USE_HSTX 1 CACHE STRING "Use HSTX for display output when possible")
 endif()
 include("pico_shared/BoardConfigs.cmake")
 if (NOT PICO_BOARD )
-    set(PICO_BOARD pico2 CACHE STRING "Board type")
+    set(PICO_BOARD pico CACHE STRING "Board type")
     message("PICO_BOARD not set, using default: ${PICO_BOARD}")
 endif()
 add_definitions( -DNDEBUG )
-include(${PICO_SDK_PATH}/lib/tinyusb/hw/bsp/family_support.cmake)
-project(${projectname} C CXX ASM)
-# NOTE: pico_sdk_import.cmake is imported by family_initialize_project()
-#       family_initialize_project() also calls pico_sdk_init().
-#       latest master branch of pico-sdk is required for PIO USB support.
-family_initialize_project(${projectname} ${CMAKE_CURRENT_LIST_DIR})
+# ---------------------------------------------------------------------------
+# TinyUSB family support + Pico SDK init
+# Include family_support.cmake BEFORE pico_sdk_init() so that TinyUSB picks up
+# the board-specific configuration (PIO USB VBUSEN pin, DP pin, etc.) from the
+# BOARD variable set by BoardConfigs.cmake.  The Pico SDK's own TinyUSB
+# integration forcibly sets BOARD="pico_sdk" which loses these board-specific
+# defines; including family_support.cmake first (with its include_guard) prevents
+# the SDK from overriding the board configuration.
+# ---------------------------------------------------------------------------
+set(FAMILY rp2040)
+include($ENV{PICO_SDK_PATH}/lib/tinyusb/hw/bsp/family_support.cmake)
 
+# Some boards (e.g. adafruit_metro_rp2350) force CFG_TUH_RPI_PIO_USB=1 in their
+# board.cmake, which TinyUSB's rp2040/family.cmake then bakes into
+# tinyusb_common_base. When PIO USB is disabled for this build, strip that
+# interface define so it doesn't fight our -DCFG_TUH_RPI_PIO_USB=0 and drag
+# hcd_pio_usb.c / pio_usb.h into the compile.
+if(ENABLE_PIO_USB EQUAL 0 AND TARGET tinyusb_common_base)
+    get_target_property(_tu_defs tinyusb_common_base INTERFACE_COMPILE_DEFINITIONS)
+    if(_tu_defs)
+        list(REMOVE_ITEM _tu_defs "CFG_TUH_RPI_PIO_USB=1")
+        set_target_properties(tinyusb_common_base PROPERTIES
+            INTERFACE_COMPILE_DEFINITIONS "${_tu_defs}")
+    endif()
+endif()
+project(${projectname} C CXX ASM)
+pico_sdk_init()
+
+# check_and_add_pico_pio_usb_support() needs pico_generate_pio_header which is
+# only available after pico_sdk_init().  The first call inside family.cmake
+# (before SDK init) was a no-op; this second call actually creates the
+# tinyusb_pico_pio_usb target AND appends hcd_pio_usb.c / dcd_pio_usb.c to
+# tinyusb_host_base / tinyusb_device_base. Skip it when PIO USB is disabled,
+# otherwise those files get compiled into the project and fail looking for
+# pio_usb.h (its include dir lives on tinyusb_pico_pio_usb, which we don't
+# link in that case).
+if(ENABLE_PIO_USB EQUAL 1)
+    message("Checking for PIO USB support...")
+    check_and_add_pico_pio_usb_support()
+endif()
+message("PIO USB support: ${ENABLE_PIO_USB}, using PIO: ${PIO_USB_USE_PIO}")
 add_executable(${projectname}
     main.cpp
     splash.cpp
@@ -47,15 +81,29 @@ pico_set_program_version(${projectname} "0.1")
 
 # disable uart output for Pimoronis Pico DV Demo Base, as gpio 1 is used for NES controller
 # so debug messages will not be visible on the serial console.
-if ( HW_CONFIG EQUAL 1 )
-    message("Disabling UART output for Pimoroni Pico DV Demo Base")
-    pico_enable_stdio_uart(${projectname} 0)
-else()
+# if ( HW_CONFIG EQUAL 1 )
+#     message("Disabling UART output for Pimoroni Pico DV Demo Base")
+#     pico_enable_stdio_uart(${projectname} 0)
+#else()
     pico_enable_stdio_uart(${projectname} 1)
-endif()
+#endif()
 pico_enable_stdio_usb(${projectname} 0)
 
-family_configure_target(${projectname} "" )
+# ---------------------------------------------------------------------------
+# What family_configure_target() used to do for us, inlined:
+#   * RP2040-E5 USB device enumeration fix
+#   * Silence harmless warnings from TinyUSB / pico-pio-usb sources
+# ---------------------------------------------------------------------------
+target_compile_definitions(${projectname} PRIVATE
+    PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1
+)
+
+target_compile_options(${projectname} PRIVATE
+    -Wno-unused-parameter
+    -Wno-unused-function
+    -Wno-cast-function-type
+    -Wno-maybe-uninitialized
+)
 
 # add_compile_definitions(CFG_TUSB_DEBUG=0)
 set(SMS_FLAGS -DMB_SMS -DLSB_FIRST=0 -DNDEBUG)
@@ -130,17 +178,21 @@ if (DEFINED PICO_DEFAULT_UART)
         PICO_DEFAULT_UART=${PICO_DEFAULT_UART}
     )
 endif()
-if (ENABLE_PIO_USB EQUAL 1)
-    # if PIO_DP_PLUS_PIN = -1, then use the default PIO USB DP pin from the board config.
-    if ( NOT  PIO_DP_PLUS_PIN EQUAL -1 )
+# ---------------------------------------------------------------------------
+# PIO USB (optional)
+# tinyusb_pico_pio_usb is a target the pico-sdk exposes when TinyUSB is present.
+# ---------------------------------------------------------------------------
+if(ENABLE_PIO_USB EQUAL 1)
+    if(NOT PIO_DP_PLUS_PIN EQUAL -1)
         message(STATUS "Using PIO USB DP pin: ${PIO_DP_PLUS_PIN}")
         target_compile_definitions(${projectname} PRIVATE
-        PICO_DEFAULT_PIO_USB_DP_PIN=${PIO_DP_PLUS_PIN} # Use the specified pin for PIO USB DP
+            PICO_DEFAULT_PIO_USB_DP_PIN=${PIO_DP_PLUS_PIN}
         )
     endif()
     message("Adding target link libraries for PIO USB support.")
     target_link_libraries(${projectname} PRIVATE tinyusb_pico_pio_usb)
-endif()    
+endif()
+
 target_link_libraries(${projectname}
 PRIVATE
     smscore
@@ -157,6 +209,7 @@ PRIVATE
     dvi
     util
     tinyusb_host 
+    tinyusb_board
     pico_shared  
     xinput_host 
 )
@@ -181,6 +234,19 @@ add_subdirectory(pico_lib/util)
 add_subdirectory(pico_shared)
 add_subdirectory(tusb_xinput xinput_host)
 target_link_options(${projectname} PRIVATE -Xlinker --print-memory-usage --data-sections)
+
+# Optional: relink this emulator to run from the bootloader's application
+# partition (for use with pico_emuLoader). Off by default so standalone builds
+# are unchanged. Enable with: cmake -DBUILD_FOR_BOOTLOADER=ON ..
+if(BUILD_FOR_BOOTLOADER)
+    include("pico_shared/BootPartition.cmake")
+    if(DEFINED BUILD_FOR_BOOTLOADER_SLOT)
+        frens_link_to_pinned_slot(${projectname} ${BUILD_FOR_BOOTLOADER_SLOT})
+    else()
+        frens_offset_for_bootloader(${projectname})
+    endif()
+endif()
+
 pico_add_extra_outputs(${projectname})
 
 

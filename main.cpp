@@ -58,25 +58,38 @@ static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
 // Order must match enum in menu_options.h
 const int8_t g_settings_visibility_sms[MOPT_COUNT] = {
     0,                               // Exit Game, or back to menu. Always visible when in-game.
-    0,                               // Reset Game. Always visible when in-game.
+    0,                               // Reset Game
+    BOOTLOADER_BUILD,                // Return to emuLoader picker (only when built for the loader)
     0,                               // Save / Restore State
-    !HSTX,                           // Screen Mode (only when not HSTX)
-    HSTX,                            // Scanlines toggle (only when HSTX)
+    1,                               // Screen Mode
+    0,                               // Scanlines toggle (superseded by Screen Mode)
+    HSTX,                            // Scanline Type (HSTX only)
     1,                               // FPS Overlay
     0,                               // Audio Enable
     0,                               // Frame Skip
-    (HSTX && ENABLEDVI),             // Display Mode HDMI or DVI
-    (EXT_AUDIO_IS_ENABLED),          // External Audio
+    HSTX && ENABLEDVI,               // Display Mode (HDMI or DVI, only when HSTX is enabled, because non-HSTX builds always use HDMI)
+    (EXT_AUDIO_IS_ENABLED ),         // External Audio
     1,                               // Font Color
     1,                               // Font Back Color
     ENABLE_VU_METER,                 // VU Meter
-    //(HW_CONFIG == 8),              // Fruit Jam Internal Speaker
+    //(HW_CONFIG == 8),                // Fruit Jam Internal Speaker
     (HW_CONFIG == 8),                // Fruit Jam Volume Control
-    0,                               // DMG Palette (SMS/Game Gear emulator does not use GameBoy palettes)
-    0,                               // Border Mode (Super Gameboy style borders not applicable for SMS/Game Gear)
+    0,                               // DMG Palette (NES emulator does not use GameBoy palettes)
+    0,                               // Border Mode (Super Gameboy style borders not applicable for NES)
     0,                               // Rapid Fire on A
     0,                               // Rapid Fire on B
-    1                                // Enter bootsel mode
+    0,                               // Auto Insert Disk A, enabled at runtime on RP2350
+    0,                               // Auto Swap FDS, enabled at runtime on RP2350
+    0,                               // FDS Disk Swap (toggled on after fdsParse succeeds)
+    0,                               // Overclock (CPU high clock toggle)
+#if HSTX
+    1,                               // YM2413 FM (SMS only, RP2350-only with HSTX)
+#else
+    0,
+#endif
+    1,                               // Enter bootsel mode
+    1,                               // Controller Test
+   
 };
 const uint8_t g_available_screen_modes_sms[] = {
 #if PICO_RP2350
@@ -259,6 +272,33 @@ bool detect_rom_type_from_memory(uintptr_t addr, int *size, bool *isGameGear)
     }
 }
 
+/* One-pole DC-blocker (R = 1 - 1/512, ~14 Hz cutoff). PSG-only output is
+   unsigned 0..0x7FFF; PSG+FM mix is signed int16. Sign-extend raw_l/r
+   directly — an unsigned cast wraps negative FM peaks to large positives
+   and corrupts the filter state with spurious step inputs. The clamp at
+   the end catches the rare PSG+FM peaks that exceed int16. */
+static inline void psg_postprocess(short raw_l, short raw_r,
+                                   short *out_l, short *out_r)
+{
+    static int32_t prev_l = 0, prev_r = 0;
+    static int32_t dc_l   = 0, dc_r   = 0;
+    int32_t xl = (int32_t)raw_l;
+    int32_t xr = (int32_t)raw_r;
+    int32_t yl = xl - prev_l + dc_l - (dc_l >> 9);
+    int32_t yr = xr - prev_r + dc_r - (dc_r >> 9);
+    prev_l = xl; prev_r = xr;
+    dc_l   = yl; dc_r   = yr;
+    /* +3.5 dB makeup gain (×1.5). PSG-only peaks land near -2.5 dBFS,
+       FM-mixed peaks near -3.5 dBFS — comfortable below the int16 ceiling
+       so the clamp rarely fires in practice. */
+    yl = yl + (yl >> 1);
+    yr = yr + (yr >> 1);
+    if (yl > 32767) yl = 32767; else if (yl < -32768) yl = -32768;
+    if (yr > 32767) yr = 32767; else if (yr < -32768) yr = -32768;
+    *out_l = (short)yl;
+    *out_r = (short)yr;
+}
+
 #if !HSTX
 #define DVILOGDROPPEDSAMPLES 0
 static void inline processaudioPerFrameDVI()
@@ -285,9 +325,11 @@ static void inline processaudioPerFrameDVI()
         auto p = ring.getWritePointer();
         for (int i = 0; i < n; ++i)
         {
-            int l = snd.buffer[0][written + i];
-            int r = snd.buffer[1][written + i];
-            *p++ = {static_cast<short>(l), static_cast<short>(r)};
+            short l = snd.buffer[0][written + i];
+            short r = snd.buffer[1][written + i];
+            short ol, or_;
+            psg_postprocess(l, r, &ol, &or_);
+            *p++ = {ol, or_};
         }
         ring.advanceWritePointer(n);
         written += n;
@@ -299,11 +341,13 @@ static void inline processaudioPerFrameHSTX() {
     {
         short l = snd.buffer[0][i];
         short r = snd.buffer[1][i];
-        hstx_push_audio_sample(l >> 2, r >> 2);
+        short ol, or_;
+        psg_postprocess(l, r, &ol, &or_);
+        hstx_push_audio_sample(ol, or_);
 #if ENABLE_VU_METER
         if (settings.flags.enableVUMeter)
         {
-            addSampleToVUMeter(l);
+            addSampleToVUMeter(ol);
         }
 #endif
     }
@@ -315,11 +359,18 @@ static void inline processaudioPerFrameI2S()
     {
         short l = snd.buffer[0][i];
         short r = snd.buffer[1][i];
-        EXT_AUDIO_ENQUEUE_SAMPLE(l >> 2, r >> 2);
+        short ol, or_;
+        psg_postprocess(l, r, &ol, &or_);
+        /* I2S DAC feeds an amp/headphone directly with no downstream volume
+           control, and the SMS+FM mix peaks much hotter than the NES mixer
+           pico_shared was tuned for — cut -6 dB here. */
+        ol = (short)(ol >> 1);
+        or_ = (short)(or_ >> 1);
+        EXT_AUDIO_ENQUEUE_SAMPLE(ol, or_);
 #if ENABLE_VU_METER
         if (settings.flags.enableVUMeter)
         {
-            addSampleToVUMeter(l);
+            addSampleToVUMeter(ol);
         }
 #endif
     }
@@ -1079,6 +1130,9 @@ void in_ram(process)(void)
     while (reset == false)
     {
         processinput(&pdwPad1, &pdwPad2, &pdwSystem, false, nullptr);
+#if PICO_RP2350
+        sms.use_fm = settings.flags.useFM;
+#endif
         sms_frame(0);
 #if EXT_AUDIO_IS_ENABLED
         if (settings.flags.useExtAudio == 1 || Frens::isHeadPhoneJackConnected())
@@ -1090,9 +1144,8 @@ void in_ram(process)(void)
 #if !HSTX
             processaudioPerFrameDVI();
 #else
-       
             processaudioPerFrameHSTX();
-#endif 
+#endif
         }
         ProcessAfterFrameIsRendered();
     }
@@ -1112,7 +1165,20 @@ int main()
     int fileSize = 0;
     isGameGear = false;
 
-    Frens::setClocksAndStartStdio(CPUFreqKHz, VREG_VOLTAGE_1_20);
+    vreg_voltage voltage = VREG_VOLTAGE_1_20;
+#if HSTX
+    Frens::FlashParams *flashParams;
+    // assign flashParams to point to flash location
+    bool freqOverruled = false;
+    flashParams = (Frens::FlashParams *)FLASHPARAM_ADDRESS;
+    if ( Frens::validateFlashParams(*flashParams) ) {
+        CPUFreqKHz = flashParams->cpuFreqKHz;
+        voltage = flashParams->voltage;
+        freqOverruled = true;
+    }
+#endif
+    Frens::setClocksAndStartStdio(CPUFreqKHz, voltage);
+
 
     printf("==========================================================================================\n");
     printf("Pico-SMS+ %s\n", SWVERSION);
@@ -1138,7 +1204,7 @@ int main()
     while (true)
     {
         #if 1
-        if (strlen(selectedRom) == 0 || reset == true)
+        if (strlen(selectedRom) == 0 || reset == true )
         {
             menu("Pico-SMS+", ErrorMessage, isFatalError, showSplash, ".sms .gg", selectedRom);
             // returns only when PSRAM is enabled,
@@ -1211,7 +1277,7 @@ int main()
         }
         do {
             reset = resetGame = false;
-            loadoverlay();
+          
             load_rom(ROM_FILE_ADDR, fileSize, isGameGear); 
             // Initialize all systems and power on
             system_init(SMS_AUD_RATE);
@@ -1219,6 +1285,19 @@ int main()
             // system_load_state();
             system_reset();
             printf("Starting game\n");
+                        // After a non-PSRAM reboot the monitor needs time to sync with the
+            // fresh HDMI signal.  Without a delay the FDS BIOS intro animation
+            // plays while the display is still dark.  Only needed on the very
+            // first launch (showSplash is true); resets keep the link up.
+            // This also benefits RP2040/RP2350: .nsf files don't clip sound at the start, roms that 
+            // start with sound also don't clip sound.
+            if (showSplash && !Frens::isPsramEnabled())
+            {
+                showSplash = false;
+                printf("Feeding blank frames for display sync...\n");
+                menuPumpBlankFrames(180);
+            }
+            loadoverlay();
             Frens::PaceFrames60fps(true); 
             process();
             system_shutdown();

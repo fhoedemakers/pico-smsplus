@@ -73,7 +73,7 @@ void SN76496Write(int chip, int data) {
 }
 
 
-void SN76496Update(int chip, INT16 *buffer[2], int length, unsigned char mask) {
+void in_ram(SN76496Update)(int chip, INT16 *buffer[2], int length, unsigned char mask) {
     int i, j;
     int buffer_index = 0;
     t_SN76496 *R = &sn[chip];
