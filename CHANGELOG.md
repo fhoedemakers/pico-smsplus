@@ -1,6 +1,6 @@
 # CHANGELOG
 
-> **YM2413 FM sound** for Japanese SMS games (RP2350), **Game Gear digitized speech fixed** (Sonic 2 "Segaaaa", etc.), and cleaner audio output with no more boot thump.
+> **YM2413 FM sound** for Japanese SMS games (RP2350), **Game Gear digitized speech fixed** (Sonic 2 "Segaaaa", etc.), cleaner audio output with no more boot thump, and support for the new **pico-bootLoader** multi-emulator menu.
 
 # General Info
 
@@ -29,6 +29,24 @@ Mitsutaka Okazaki.
 
 FM can be toggled in the settings menu. RP2040 builds are unchanged
 (FM is not enabled there for performance reasons).
+
+### Works with pico-bootLoader
+
+There is a new companion project,
+[pico-bootLoader](https://github.com/fhoedemakers/pico-bootLoader), that lets
+one RP2350 board hold several emulators (and a native *Doom* port) at the same
+time. Every power-on brings up a menu where you pick which one to run — no more
+plugging the board into a PC and copying a `.uf2` over just to switch systems.
+
+This release makes the Master System / Game Gear emulator one of those
+selectable entries. When it has been started from the bootloader, the in-game
+settings menu gains a **Return to emulator selection** entry so you can hop
+straight back to the picker.
+
+Nothing changes if you don't use it: the normal `.uf2` downloads below are
+still stand-alone and install exactly as before. The bootloader-ready builds
+come with the [pico-bootLoader
+release](https://github.com/fhoedemakers/pico-bootLoader/releases/latest).
 
 ### Game Gear digitized speech fixed
 
@@ -71,6 +89,13 @@ sound effects come through cleanly.
 - Internal settings-visibility table cleaned up so menu entries appear
   on exactly the boards that support them.
 - The border overlay now shows up reliably when starting a game.
+- **Random crash fixed.** The screen buffer could end up at an address the
+  processor doesn't like, which showed up as an occasional lock-up while
+  playing. It is now always placed correctly.
+- **Steadier overclocking.** Boards running at the higher clock speeds could
+  fault a few seconds into a game. The flash memory timing now follows the
+  chosen speed instead of being fixed, so those settings stay stable.
+- Builds work again with the newest version of Raspberry Pi's `picotool`.
 
 ## Credits
 
