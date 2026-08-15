@@ -9,6 +9,21 @@
 
 For board-by-board wiring, supported display modes and more refer to the [pico-infonesPlus documentation](https://github.com/fhoedemakers/pico-infonesPlus#setup). The set of supported boards and their pinouts is identical between the two projects.
 
+# v0.27 Release notes
+
+A small release with a couple of display and settings fixes.
+
+## Fixes
+
+- **Fixed the scanline setting being ignored when a game starts.** Games came up
+  without the scanline effect you had selected, and only picked it up once you
+  had opened the settings menu and left it again. Starting a game now applies
+  your chosen screen mode, scanline style and aspect ratio straight away. Most
+  visible on boards that boot directly into a game, which is every board without
+  PSRAM.
+- Resetting the settings to their defaults no longer leaves an unused internal
+  scanline switch at whatever value the settings file happened to hold.
+
 # v0.26 Release notes
 
 This release is mostly about **sound**. Japanese Master System games gain

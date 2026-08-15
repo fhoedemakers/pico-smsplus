@@ -1193,11 +1193,15 @@ int main()
     //     - When using framebuffer, AUDIOBUFFERSIZE must be increased to 1024
     //     - Top and bottom margins are reset to zero
     isFatalError = !Frens::initAll(selectedRom, CPUFreqKHz, MARGINTOP, MARGINBOTTOM, AUDIOBUFFERSIZE, false, true);
-#if !HSTX
+    // Must go through applyScreenMode on both display paths: it is the only
+    // place that pushes scanline *type* and aspect ratio to the HSTX driver as
+    // well as the on/off bit. Calling hstx_setScanLines() directly here left
+    // type/aspect at their power-on defaults until the first menu exit, so a
+    // game started straight from boot (non-PSRAM builds reboot into the rom,
+    // skipping the menu entirely) rendered with the wrong scanline settings.
+    // It also read flags.scanlineOn, the legacy toggle this port hides and
+    // nothing writes any more - screenMode owns scanlines now.
     scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
-#else
-    hstx_setScanLines(settings.flags.scanlineOn);
-#endif
     bool showSplash = true;
     g_settings_visibility = g_settings_visibility_sms;
     g_available_screen_modes = g_available_screen_modes_sms;
