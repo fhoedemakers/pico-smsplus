@@ -1,6 +1,6 @@
 # CHANGELOG
 
-> **YM2413 FM sound** for Japanese SMS games (RP2350), **Game Gear digitized speech fixed** (Sonic 2 "Segaaaa", etc.), cleaner audio output with no more boot thump, and support for the new **pico-bootLoader** multi-emulator menu.
+> Adds a **Recently played** list of the last 20 games, skips re-flashing a rom that is already in flash, supports **SNES controllers** on the GPIO controller port, and updates the PicoNES PCB design to **v2.6**.
 
 # General Info
 
@@ -11,18 +11,83 @@ For board-by-board wiring, supported display modes and more refer to the [pico-i
 
 # v0.27 Release notes
 
-A small release with a couple of display and settings fixes.
+This release adds a recently played list, avoids re-flashing a rom that is
+already in flash, adds SNES controller support on the GPIO controller port, and
+updates the PicoNES PCB design. It also contains a number of display, settings
+and menu fixes.
+
+## What's new
+
+### Recently played
+
+The menu keeps a list of the last 20 games that were started, newest first. It is
+opened with Button3 in the rom browser — X on a SNES controller, Y on XInput,
+Triangle on PlayStation, C on Genesis, X on a Wii Classic pad — or from the new
+**Recently played** entry at the top of the settings menu.
+
+In the list, Button2 starts the selected game, SELECT removes it from the list,
+START shows its artwork, and Button1 closes the list. The settings menu offers
+the entry only when it is opened from the rom browser, not from inside a running
+game. That is also the route for pads without a Button3, such as a NES pad on the
+controller port.
+
+The list is stored as plain text in `/recent_SMS.txt` in the SD card root, one
+line per game, and can be edited or deleted on a PC. Master System and Game Gear
+roms share a single list. A game that is no longer present on the card is
+reported as missing when it is started, and can be removed with SELECT. An
+unreadable list is treated as empty; no other settings are affected.
+
+On boards without PSRAM, the entry whose rom is currently in flash is marked
+`[READY]`.
+
+### Roms already in flash are no longer re-flashed
+
+On boards without PSRAM the rom was written to flash on every launch, including
+when the image already in flash was the game being started. The emulator now
+detects this case and skips the write, which removes the delay when restarting a
+game that was just played. The image is verified before the write is skipped;
+anything that does not match is flashed as before.
+
+### SNES controllers on the GPIO controller port
+
+The controller port now reads all 12 buttons of a SNES pad, and the menu maps its
+face buttons by name: Button2 selects, Button1 goes back, and X opens the
+recently played list, as on USB and Wii Classic pads. Previously a SNES pad was
+read as a NES pad, so these buttons were mapped incorrectly. NES pads are
+unaffected.
+
+The Controller Test screen now reports the detected pad type, names the buttons
+according to that type, and shows the raw data received from the pad on the GPIO
+ports.
+
+### PicoNES PCB revision v2.6
+
+The PicoNES PCB design has been updated to v2.6 (`pico_nesPCB_v2.6.zip`),
+replacing v2.1 as the current release. It adds through-holes, allowing a Pico to
+be mounted on male headers instead of soldered flat, which makes the
+[Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107)
+usable on this PCB. It also corrects the silkscreen labelling of the D3/D4 pads
+on controller port 2, which was reversed on v2.1. Only the labelling differed;
+the routing is identical on both revisions and no firmware change is required.
+
+The README now documents all three PCB designs —
+[PicoNES, PicoNES Mini and PicoNES Micro](https://github.com/fhoedemakers/pico-smsplus#custom-pcbs).
 
 ## Fixes
 
-- **Fixed the scanline setting being ignored when a game starts.** Games came up
-  without the scanline effect you had selected, and only picked it up once you
-  had opened the settings menu and left it again. Starting a game now applies
-  your chosen screen mode, scanline style and aspect ratio straight away. Most
-  visible on boards that boot directly into a game, which is every board without
-  PSRAM.
+- Fixed the scanline setting being ignored when a game starts. Games started
+  without the selected scanline effect and only picked it up after the settings
+  menu had been opened and closed. Starting a game now applies the selected
+  screen mode, scanline style and aspect ratio immediately. This mainly affected
+  boards that boot directly into a game, which is every board without PSRAM.
 - Resetting the settings to their defaults no longer leaves an unused internal
-  scanline switch at whatever value the settings file happened to hold.
+  scanline switch at the value held by the settings file.
+- Fixed the settings menu discarding its result. A screen opened from the
+  settings menu — the recently played list or the controller test — could return
+  to the screensaver instead of applying what was selected.
+- Reduced stack usage while browsing the rom list.
+- Debug builds now report HDMI audio underruns per interval in addition to the
+  total counted since boot.
 
 # v0.26 Release notes
 
@@ -218,7 +283,7 @@ For some configurations risc-v binaries are available. It is recommended however
 | Board | Binary | Readme |
 |:--|:--|:--|
 | Pico| [picosmsPlus_AdafruitDVISD_pico_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
-| Pico W | [picosmsPlus_AdafruitDVISD_pico_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_w_arm.uf2) | [Readme](README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
+| Pico W | [picosmsPlus_AdafruitDVISD_pico_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_w_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
 | Pico 2 | [picosmsPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
 | Pico 2 W | [picosmsPlus_AdafruitDVISD_pico2_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
 | Adafruit feather rp2040 DVI | [picosmsPlus_AdafruitFeatherDVI_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitFeatherDVI_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#adafruit-feather-rp2040-with-dvi-hdmi-output-port-setup) |
@@ -230,11 +295,11 @@ For some configurations risc-v binaries are available. It is recommended however
 | Board | Binary | Readme |
 |:--|:--|:--|
 | Pico| [picosmsPlus_AdafruitDVISD_pico_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2) |
-| Pico W| [picosmsPlus_AdafruitDVISD_pico_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_w_arm.uf2) | [Readme](README.md#pcb-with-raspberry-pi-pico-or-pico-2) |
+| Pico W| [picosmsPlus_AdafruitDVISD_pico_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico_w_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2) |
 | Pico 2 | [picosmsPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2) |
 | Pico 2 W | [picosmsPlus_AdafruitDVISD_pico2_w_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2) |
 
-PCB [pico_nesPCB_v2.1.zip](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/pico_nesPCB_v2.1.zip)
+PCB: [pico_nesPCB_v2.6.zip](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/pico_nesPCB_v2.6.zip) (new in this release, replaces v2.1). [Readme](https://github.com/fhoedemakers/pico-smsplus#picones-pcb)
 
 3D-printed case designs for PCB:
 
@@ -246,12 +311,14 @@ For the latest two player PCB 2.0, you need:
 - Power_Switch.stl.
 (*) in case you don't want to access the bootsel button on the Pico, you can choose Top_v2.0.stl
 
+When the Pico is mounted with male headers on the v2.6 PCB, use the latest top cover. The older covers assume a Pico soldered flat and leave no room for the USB cable.
+
 ### PCB WS2XX0-Zero (PCB required)
 
 | Board | Binary | Readme |
 |:--|:--|:--|
-| Waveshare RP2040-Zero | [picosmsPlus_WaveShareRP2040ZeroWithPCB_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_WaveShareRP2040ZeroWithPCB_arm.uf2) | [Readme](README.md#pcb-with-waveshare-rp2040rp2350-zero) |
-| Waveshare RP2350-Zero | [picosmsPlus_WaveShareRP2350ZeroWithPCB_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsplus_WaveShareRP2350ZeroWithPCB_arm.uf2) | [Readme](README.md#pcb-with-waveshare-rp2040rp2350-zero) |
+| Waveshare RP2040-Zero | [picosmsPlus_WaveShareRP2040ZeroWithPCB_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_WaveShareRP2040ZeroWithPCB_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-smsplus#picones-mini-pcb) |
+| Waveshare RP2350-Zero | [picosmsPlus_WaveShareRP2350ZeroWithPCB_arm.uf2](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/picosmsPlus_WaveShareRP2350ZeroWithPCB_arm.uf2) | [Readme](https://github.com/fhoedemakers/pico-smsplus#picones-mini-pcb) |
 
 PCB: [Gerber_PicoNES_Mini_PCB_v2.0.zip](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/Gerber_PicoNES_Mini_PCB_v2.0.zip)
 
@@ -263,7 +330,7 @@ PCB: [Gerber_PicoNES_Mini_PCB_v2.0.zip](https://github.com/fhoedemakers/pico-sms
 
 PCB: [Gerber_PicoNES_Micro_v1.2.zip](https://github.com/fhoedemakers/pico-smsplus/releases/latest/download/Gerber_PicoNES_Micro_v1.2.zip)
 
-[Readme](https://github.com/fhoedemakers/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2350-usb-a)
+[Readme](https://github.com/fhoedemakers/pico-smsplus#picones-micro-pcb)
 
 [Build guide](https://www.instructables.com/PicoNES-RaspberryPi-Pico-Based-NES-Emulator/)
 
