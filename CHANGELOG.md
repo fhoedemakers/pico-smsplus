@@ -1,6 +1,6 @@
 # CHANGELOG
 
-> Adds a **Recently played** list of the last 20 games, skips re-flashing a rom that is already in flash, supports **SNES controllers** on the GPIO controller port, and updates the PicoNES PCB design to **v2.6**.
+> Maintenance release: updates the shared menu and support code. Fixes a black screen on **DVI-only monitors**, and stops **clone Pico boards** crashing at start-up. The emulator itself is unchanged.
 
 # General Info
 
@@ -8,6 +8,16 @@
 [Binaries for each configuration and PCB design are at the end of this page](#downloads___).
 
 For board-by-board wiring, supported display modes and more refer to the [pico-infonesPlus documentation](https://github.com/fhoedemakers/pico-infonesPlus#setup). The set of supported boards and their pinouts is identical between the two projects.
+
+# v0.28 Release notes
+
+A maintenance release. It brings the shared menu and support code up to date; the emulator itself is unchanged. Upgrading is only a matter of flashing the new `.uf2` — your settings, saves and save states on the SD card are untouched.
+
+## Fixes
+
+- **DVI-only monitors show a picture again.** With **Display Mode** set to DVI, some older screens that accept DVI but not HDMI stayed black. They work again.
+- **Clone Pico boards no longer crash at start-up.** Boards fitted with a cheaper flash chip than a genuine Raspberry Pi Pico could hang on power-on. The chip is now recognised and driven at a speed it can handle. Genuine Picos are unaffected.
+- **Steadier start-up.** The board lets its power settle before switching to the higher clock speed.
 
 # v0.27 Release notes
 
