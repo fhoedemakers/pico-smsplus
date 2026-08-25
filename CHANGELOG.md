@@ -1,6 +1,6 @@
 # CHANGELOG
 
-> Maintenance release: updates the shared menu and support code. Fixes a black screen on **DVI-only monitors**, and stops **clone Pico boards** crashing at start-up. The emulator itself is unchanged.
+Maintenance release: updates the shared menu and support code. Fixes a black screen on **DVI-only monitors**, and stops **clone Pico boards** crashing at start-up. The emulator itself is unchanged.
 
 # General Info
 
