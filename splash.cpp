@@ -59,6 +59,6 @@ void splash()
 
     strcpy(s, "https://github.com/");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 25, s, CBLUE, bgcolorSplash);
-    strcpy(s, "fhoedemakers/pico-smsplus");
+    strcpy(s, "PicoPlus-devel/pico-smsplus");
     putText(SCREEN_COLS / 2 - strlen(s) / 2, 26, s, CBLUE, bgcolorSplash);
 }
